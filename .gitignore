@@ -60,3 +60,5 @@ RemoteSystemsTempFiles*
 # Compiled binaries
 **/Debug/
 **/Release/
+
+**/.settings/
