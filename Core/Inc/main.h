@@ -40,7 +40,7 @@ extern "C" {
 
 extern TIM_HandleTypeDef htim3;
 
-extern union float_bytes {
+extern union FloatBytes {
 	float float_value;
 	uint8_t bytes[4];
 } current, velocity;
@@ -54,14 +54,18 @@ typedef struct input_flags {
   volatile uint8_t brake_in;
   volatile uint8_t regen_value_is_zero;
   volatile uint8_t encoder_value_is_zero;
+  volatile uint8_t encoder_value_increasing;
   volatile uint8_t next_screen;
 } input_flags;
 
 extern input_flags event_flags;
 
 extern uint32_t regen_value;
-extern uint8_t cruise_value;
+extern int8_t cruise_value;
+
 extern uint8_t battery_soc;
+
+extern uint32_t buffer;
 
 /* USER CODE END ET */
 
