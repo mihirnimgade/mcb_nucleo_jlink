@@ -31,6 +31,8 @@
 #include "can.h"
 #include "tim.h"
 
+#include "SEGGER_RTT.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,27 +43,32 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define ENCODER_QUEUE_MSG_CNT 5  /* maximum number of messages allowed in encoder queue */
-#define ENCODER_QUEUE_MSG_SIZE 2 /* size of each message in encoder queue 2 bytes (uint16_t) */
+#define ENCODER_QUEUE_MSG_CNT 				5  /* maximum number of messages allowed in encoder queue */
+#define ENCODER_QUEUE_MSG_SIZE 				2  /* size of each message in encoder queue 2 bytes (uint16_t) */
 
-#define DEFAULT_CRUISE_SPEED 10 /* TODO: calibrate this */
+#define DEFAULT_CRUISE_SPEED 				10 /* TODO: calibrate this */
 
-#define BATTERY_REGEN_THRESHOLD 90 /* maximum battery percentage at which regen is enabled */
+#define BATTERY_REGEN_THRESHOLD 			90 /* maximum battery percentage at which regen is enabled */
 
-#define CAN_FIFO0 0
-#define CAN_FIFO1 1
+#define CAN_FIFO0 							0
+#define CAN_FIFO1 							1
 
-#define INIT_EVENT_FLAGS_SEMAPHORE_VAL 0
-#define MAX_EVENT_FLAGS_SEMAPHORE_VAL 1
+#define TRUE 								1
+#define FALSE 								0
 
-#define PEDAL_MAX 0xD0 /* TODO: calibrate this */
-#define PEDAL_MIN 0x0F /* TODO: calibrate this */
+#define INIT_EVENT_FLAGS_SEMAPHORE_VAL 		0
+#define MAX_EVENT_FLAGS_SEMAPHORE_VAL 		1
 
-#define EVENT_FLAG_UPDATE_DELAY 25
-#define ENCODER_READ_DELAY 50
-#define READ_BATTERY_SOC_DELAY 5000
+#define PEDAL_MAX 							0x64 /* TODO: calibrate this */
+#define PEDAL_MIN 							0x00 /* TODO: calibrate this */
 
-#define KERNEL_LED_DELAY 150
+#define EVENT_FLAG_UPDATE_DELAY 			25
+#define ENCODER_READ_DELAY 					50
+#define READ_BATTERY_SOC_DELAY 				5000
+
+#define STATE_LED_DELAY 					200
+
+#define KERNEL_LED_DELAY 					150
 
 /* USER CODE END PD */
 
@@ -86,6 +93,10 @@ osThreadId_t sendIdleCommandTaskHandle;
 
 osThreadId_t receiveBatteryMessageTaskHandle;
 
+osThreadId_t initialSetupTaskHandle;
+
+osThreadId_t monitorStateTaskHandle;
+
 osMessageQueueId_t encoderQueueHandle;
 
 osEventFlagsId_t commandEventFlagsHandle;
@@ -94,22 +105,16 @@ osSemaphoreId_t eventFlagsSemaphoreHandle;
 osSemaphoreId_t nextScreenSemaphoreHandle;
 
 // indicates the current state of the main control node
-enum states
-{
+enum states {
     IDLE = (uint32_t) 0x0001,
     NORMAL_READY = (uint32_t) 0x0002,
     REGEN_READY = (uint32_t) 0x0004,
     CRUISE_READY = (uint32_t) 0x0008
 } state;
 
+volatile uint16_t encoder_reading = 0x0000;
+
 /* USER CODE END Variables */
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -126,11 +131,13 @@ void sendCruiseCommandTask(void *argument);
 void sendIdleCommandTask(void *argument);
 void sendNextScreenMessageTask(void *argument);
 
+void initialSetupTask(void *argument);
+
+void monitorStateTask(void *argument);
+
 void receiveBatteryMessageTask(void *argument);
 
 /* USER CODE END FunctionPrototypes */
-
-void StartDefaultTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -148,7 +155,6 @@ void MX_FREERTOS_Init(void) {
 
     kernelLEDTaskHandle = osThreadNew(kernelLEDTask, NULL, &kernelLEDTask_attributes);
 
-    /*
     readEncoderTaskHandle = osThreadNew(readEncoderTask, NULL, &readEncoderTask_attributes);
     updateEventFlagsTaskHandle = osThreadNew(updateEventFlagsTask, NULL, &updateEventFlagsTask_attributes);
 
@@ -157,10 +163,13 @@ void MX_FREERTOS_Init(void) {
     sendCruiseCommandTaskHandle = osThreadNew(sendCruiseCommandTask, NULL, &sendCruiseCommandTask_attributes);
     sendIdleCommandTaskHandle = osThreadNew(sendIdleCommandTask, NULL, &sendIdleCommandTask_attributes);
 
-    sendNextScreenMessageTaskHandle = osThreadNew(sendNextScreenMessageTask, NULL, &sendNextScreenTask_attributes);
+	initialSetupTaskHandle = osThreadNew(initialSetupTask, NULL, &initialSetupTask_attributes);
+
+    // sendNextScreenMessageTaskHandle = osThreadNew(sendNextScreenMessageTask, NULL, &sendNextScreenTask_attributes);
 
     receiveBatteryMessageTaskHandle = osThreadNew(receiveBatteryMessageTask, NULL, &receiveBatteryMessageTask_attributes);
-    */
+
+    monitorStateTaskHandle = osThreadNew(monitorStateTask, NULL, &monitorStateTask_attributes);
 
     // <----- Event flag object handles ----->
 
@@ -172,53 +181,6 @@ void MX_FREERTOS_Init(void) {
     nextScreenSemaphoreHandle = osSemaphoreNew(1, 0, NULL);
 
   /* USER CODE END Init */
-
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
-
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
-
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
-
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
-
-  /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
-
-}
-
-/* USER CODE BEGIN Header_StartDefaultTask */
-/**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
-{
-  /* USER CODE BEGIN StartDefaultTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
@@ -238,24 +200,48 @@ __NO_RETURN void kernelLEDTask(void *argument) {
 	}
 }
 
+void initialSetupTask(void *argument) {
+    uint8_t data_send[CAN_DATA_LENGTH];
+
+	osKernelState_t kernel_state = osKernelGetState();
+
+	if (kernel_state == osKernelRunning) {
+		for (uint8_t i = 0; i < CAN_DATA_LENGTH; i++) {
+			data_send[i] = 0xff;
+		}
+		HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send, &can_mailbox);
+	} else {
+		for (uint8_t i = 0; i < CAN_DATA_LENGTH; i++) {
+			data_send[i] = 0x00;
+		}
+
+		HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send, &can_mailbox);
+	}
+	osThreadExit();
+}
+
 /**
   * @brief  reads the encoder and places the value in the encoder queue
   * @retval None
   */
 __NO_RETURN void readEncoderTask(void *argument) {
-    static uint16_t old_encoder_reading = 0x0000;
-    static uint16_t encoder_reading = 0x0000;
+    static volatile uint16_t old_encoder_reading = 0x0000;
 
     while (1) {
         encoder_reading = __HAL_TIM_GET_COUNTER(&htim2);
 
         // update the event flags struct
         event_flags.encoder_value_is_zero = (encoder_reading == 0);
-        
-        osSemaphoreRelease(eventFlagsSemaphoreHandle);
 
         if (encoder_reading != old_encoder_reading) {
             osMessageQueuePut(encoderQueueHandle, &encoder_reading, 0U, 0U);
+        }
+
+        if (encoder_reading > old_encoder_reading) {
+        	event_flags.encoder_value_increasing = TRUE;
+        	event_flags.cruise_status = DISABLE;
+        } else {
+        	event_flags.encoder_value_increasing = FALSE;
         }
 
         old_encoder_reading = encoder_reading;
@@ -410,9 +396,6 @@ __NO_RETURN void sendNextScreenMessageTask (void *argument) {
   */
 __NO_RETURN void updateEventFlagsTask(void *argument) {
     while (1) {
-        // waits for the event flags struct to change
-        // osSemaphoreAcquire(eventFlagsSemaphoreHandle, osWaitForever);
-
         // order of priorities beginning with most important: regen braking, encoder motor command, cruise control
         if (event_flags.regen_enable && regen_value > 0 && battery_soc < BATTERY_REGEN_THRESHOLD) {
             state = REGEN_READY;
@@ -420,12 +403,11 @@ __NO_RETURN void updateEventFlagsTask(void *argument) {
         else if (!event_flags.encoder_value_is_zero && !event_flags.cruise_status) {
             state = NORMAL_READY;
         }
-        else if (event_flags.cruise_status && cruise_value > 0 && !event_flags.brake_in) {
+        else if (event_flags.cruise_status && !event_flags.brake_in && !event_flags.encoder_value_increasing && (cruise_value > 0 || encoder_reading > 0)) {
+			if (state == NORMAL_READY) {
+				cruise_value = encoder_reading;
+			}
             state = CRUISE_READY;
-        }
-        // only want to idle after braking when exiting cruise mode
-        else if (event_flags.brake_in && event_flags.cruise_status){
-             state = IDLE;
         }
         else {
             state = IDLE;
@@ -437,7 +419,7 @@ __NO_RETURN void updateEventFlagsTask(void *argument) {
 }
 
 /**
-  * @brief  Reads battery SOC from CAN bus (message ID 0x626, byte 0)
+  * @brief  Reads battery SOC from CAN bus (message ID 0x626, data byte 0)
   * @param  argument: Not used
   * @retval None
   */
@@ -460,6 +442,40 @@ __NO_RETURN void receiveBatteryMessageTask (void *argument) {
 
         osDelay(READ_BATTERY_SOC_DELAY);
     }
+}
+
+void monitorStateTask(void *argument) {
+	while (1) {
+		switch (state) {
+		case NORMAL_READY:
+			HAL_GPIO_TogglePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin);
+			HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin, GPIO_PIN_RESET);
+			break;
+		case REGEN_READY:
+			HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_TogglePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin);
+			HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin, GPIO_PIN_RESET);
+			break;
+		case CRUISE_READY:
+			HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_TogglePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin);
+			break;
+		default:
+			HAL_GPIO_WritePin(GPIOA, SEND_NORMAL_Pin|SEND_CRUISE_Pin|SEND_REGEN_Pin, GPIO_PIN_RESET);
+			break;
+		}
+
+		if (state == CRUISE_READY) {
+			HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_SET);
+		} else {
+			HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_RESET);
+		}
+
+
+		osDelay(STATE_LED_DELAY);
+	}
 }
 
 /* USER CODE END Application */
