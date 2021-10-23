@@ -1,0 +1,26 @@
+
+OpenDocument="stm32f1xx_hal_can.c", FilePath="C:/Users/mihir/STM32CubeIDE/workspace_1.4.0/mcb_nucleo_jlink/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_can.c", Line=1227
+OpenDocument="tasks.c", FilePath="C:/Users/mihir/STM32CubeIDE/workspace_1.4.0/mcb_nucleo_jlink/Middlewares/Third_Party/FreeRTOS/org/Source/tasks.c", Line=3224
+OpenDocument="can.h", FilePath="C:/Users/mihir/STM32CubeIDE/workspace_1.4.0/mcb_nucleo_jlink/Core/Inc/can.h", Line=27
+OpenDocument="main.c", FilePath="C:/Users/mihir/STM32CubeIDE/workspace_1.4.0/mcb_nucleo_jlink/Core/Src/main.c", Line=75
+OpenDocument="stm32f1xx_it.c", FilePath="C:/Users/mihir/STM32CubeIDE/workspace_1.4.0/mcb_nucleo_jlink/Core/Src/stm32f1xx_it.c", Line=23
+OpenToolbar="Debug", Floating=0, x=0, y=0
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=1, w=717, h=418, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=5
+OpenWindow="Memory 1", DockArea=BOTTOM, x=1, y=0, w=963, h=789, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, EditorAddress=0x20004E44
+OpenWindow="Global Data", DockArea=RIGHT, x=0, y=0, w=717, h=397, TabPos=0, TopOfStack=1, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=3, w=504, h=200, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Graph", DockArea=LEFT, x=0, y=0, w=504, h=237, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Memory Usage", DockArea=LEFT, x=0, y=1, w=504, h=199, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Code Profile", DockArea=LEFT, x=0, y=2, w=504, h=199, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, GroupByFiles=0, SortRespectsFilters=0, ParentRelativeLoad=0
+OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1916, h=789, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="FreeRTOS", DockArea=RIGHT, x=0, y=0, w=717, h=397, TabPos=1, TopOfStack=0, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, Showing="Task List"
+TableHeader="Task List", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Run Count";"Priority";"Status";"Timeout";"Stack Info (Free / Size)";"ID";"Mutex Count";"Notified Value";"Notify State"], ColWidths=[221;110;110;110;110;231;110;110;110;110]
+TableHeader="Global Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[175;123;100;100;117;356]
+TableHeader="Code Profile", SortCol="File / Function", SortOrder="ASCENDING", VisibleCols=["File / Function";"Source Coverage";"Inst. Coverage";"Run Count";"Fetch Count";"Load"], ColWidths=[774;157;174;113;122;104]
+TableHeader="Power Sampling", SortCol="Index", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
+TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[170;144;377]
+TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh"], ColWidths=[135;100;100;169]
+TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
+TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[26;26;26;45]
+TableHeader="Call Graph", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Stack Total";"Stack Local";"Code Total";"Code Local";"Depth";"Called From"], ColWidths=[564;114;116;113;115;114;123]
+WatchedExpression="watched_value", RefreshRate=5, Window=Watched Data 1
