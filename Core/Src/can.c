@@ -27,7 +27,8 @@ CAN_TxHeaderTypeDef drive_command_header = {
     .ExtId = 0x0000,
     .IDE = CAN_ID_STD,
     .RTR = CAN_RTR_DATA,
-    .DLC = CAN_DATA_LENGTH};
+    .DLC = CAN_DATA_LENGTH
+};
 
 CAN_TxHeaderTypeDef screen_cruise_control_header = {
 	.StdId = DRIVER_CONTROLS_BASE_ADDRESS + 3,
@@ -35,6 +36,14 @@ CAN_TxHeaderTypeDef screen_cruise_control_header = {
 	.IDE = CAN_ID_STD,
 	.RTR = CAN_RTR_DATA,
 	.DLC = CAN_CONTROL_DATA_LENGTH
+};
+
+CAN_TxHeaderTypeDef kernel_state_header = {
+    .StdId = 0x701,
+    .ExtId = 0x0000,
+    .IDE = CAN_ID_STD,
+    .RTR = CAN_RTR_DATA,
+    .DLC = CAN_DATA_LENGTH
 };
 
 CAN_RxHeaderTypeDef can_rx_header;
