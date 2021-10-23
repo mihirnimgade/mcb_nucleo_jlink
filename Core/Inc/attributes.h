@@ -30,4 +30,8 @@ extern const osTimerAttr_t encoderTimer_attributes;
 
 extern const osMessageQueueAttr_t encoderQueue_attributes;
 
+extern const osThreadAttr_t monitorStateTask_attributes;
+
+extern const osThreadAttr_t initialSetupTask_attributes;
+
 #endif /* INC_ATTRIBUTES_H_ */
