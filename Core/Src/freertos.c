@@ -66,9 +66,13 @@
 #define ENCODER_READ_DELAY 					50
 #define READ_BATTERY_SOC_DELAY 				5000
 
+#define MAX_MOTOR_TEMPERATURE				60			/**< Maximum motor temperature in celsius. */
+
 #define STATE_LED_DELAY 					200
 
 #define KERNEL_LED_DELAY 					150
+
+#define MOTOR_OVERHEAT_DELAY				1000			/**< Delay between each time the motor temperature is read fro CAN (in ms).*/
 
 /* USER CODE END PD */
 
@@ -91,6 +95,8 @@ osThreadId_t sendCruiseCommandTaskHandle;
 osThreadId_t sendNextScreenMessageTaskHandle;
 osThreadId_t sendIdleCommandTaskHandle;
 
+osThreadId_t sendMotorOverheatTaskHandle;
+
 osThreadId_t receiveBatteryMessageTaskHandle;
 
 osThreadId_t initialSetupTaskHandle;
@@ -109,7 +115,8 @@ enum states {
     IDLE = (uint32_t) 0x0001,
     NORMAL_READY = (uint32_t) 0x0002,
     REGEN_READY = (uint32_t) 0x0004,
-    CRUISE_READY = (uint32_t) 0x0008
+    CRUISE_READY = (uint32_t) 0x0008,
+	MOTOR_OVERHEAT = (uint32_t) 0x0010
 } state;
 
 volatile uint16_t encoder_reading = 0x0000;
@@ -130,6 +137,8 @@ void sendRegenCommandTask(void *argument);
 void sendCruiseCommandTask(void *argument);
 void sendIdleCommandTask(void *argument);
 void sendNextScreenMessageTask(void *argument);
+
+void sendMotorOverheatTask (void *argument);
 
 void initialSetupTask(void *argument);
 
@@ -163,11 +172,13 @@ void MX_FREERTOS_Init(void) {
     sendCruiseCommandTaskHandle = osThreadNew(sendCruiseCommandTask, NULL, &sendCruiseCommandTask_attributes);
     sendIdleCommandTaskHandle = osThreadNew(sendIdleCommandTask, NULL, &sendIdleCommandTask_attributes);
 
+	sendMotorOverheatTaskHandle = osThreadNew(sendMotorOverheatTask, NULL, &sendMotorOverheatTask_attributes);
+
 	initialSetupTaskHandle = osThreadNew(initialSetupTask, NULL, &initialSetupTask_attributes);
 
     // sendNextScreenMessageTaskHandle = osThreadNew(sendNextScreenMessageTask, NULL, &sendNextScreenTask_attributes);
 
-    receiveBatteryMessageTaskHandle = osThreadNew(receiveBatteryMessageTask, NULL, &receiveBatteryMessageTask_attributes);
+    // receiveBatteryMessageTaskHandle = osThreadNew(receiveBatteryMessageTask, NULL, &receiveBatteryMessageTask_attributes);
 
     monitorStateTaskHandle = osThreadNew(monitorStateTask, NULL, &monitorStateTask_attributes);
 
@@ -225,7 +236,7 @@ void initialSetupTask(void *argument) {
   * @retval None
   */
 __NO_RETURN void readEncoderTask(void *argument) {
-    static volatile uint16_t old_encoder_reading = 0x0000;
+    static uint16_t old_encoder_reading = 0x0000;
 
     while (1) {
         encoder_reading = __HAL_TIM_GET_COUNTER(&htim2);
@@ -397,7 +408,10 @@ __NO_RETURN void sendNextScreenMessageTask (void *argument) {
 __NO_RETURN void updateEventFlagsTask(void *argument) {
     while (1) {
         // order of priorities beginning with most important: regen braking, encoder motor command, cruise control
-        if (event_flags.regen_enable && regen_value > 0 && battery_soc < BATTERY_REGEN_THRESHOLD) {
+    	if (event_flags.motor_overheat) {
+    		state = MOTOR_OVERHEAT;
+    	}
+		else if (event_flags.regen_enable && regen_value > 0 && battery_soc < BATTERY_REGEN_THRESHOLD) {
             state = REGEN_READY;
         }
         else if (!event_flags.encoder_value_is_zero && !event_flags.cruise_status) {
@@ -442,6 +456,52 @@ __NO_RETURN void receiveBatteryMessageTask (void *argument) {
 
         osDelay(READ_BATTERY_SOC_DELAY);
     }
+}
+
+/**
+ * @brief  	Reads motor temperature from CAN bus (message ID 0x50B). Since the the Tritium BMS does not have over-temperature
+ * 			shutdown, the motor will need to stop sending commands when it reaches a temperature of MAX_MOTOR_TEMPERATURE.
+ *
+ * @param  	argument: Not used
+ * @retval 	None
+ */
+__NO_RETURN void sendMotorOverheatTask (void *argument) {
+	uint8_t motor_temperature_data[CAN_DATA_LENGTH]; // the motor temperature is bytes [3:0] TODO: this is an assumption
+
+	while (1) {
+		if (HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_RX_FIFO0)) {
+			// there are multiple CAN IDs being passed through the filter, check if the message is the motor temperature
+			HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &can_rx_header, motor_temperature_data);
+			if (can_rx_header.StdId == 0x50B) {
+
+				// assign the values from the CAN message into the
+				// use the union to convert the 4 bytes to a 32-bit float
+				for (int i = 0; i < (uint8_t)CAN_DATA_LENGTH / 2; i++)
+				{
+					/*
+					 * transfer the incoming bytes LIFO 	TODO: test IEEE 754 conversion on hardware
+					 * for example, 0xAABBCCDD
+					 * 		received[0] = 0xDD -> copied[3] = 0xDD
+					 * 		received[1] = 0xCC -> copied[2] - 0xCC
+					 * 		received[2] = 0xBB -> copied[1] = 0xBB
+					 * 		received[3] = 0xAA -> copied[0] - 0xAA
+					 */
+					motor_temperature.bytes[i] = motor_temperature_data[i];
+				}
+
+				// if the motor temperature is over heating, stop sending commands
+				if (motor_temperature.float_value >= MAX_MOTOR_TEMPERATURE) {
+					// change the state so that sendMotorCommandTask will not run
+					event_flags.motor_overheat = 0x01;
+				} else {
+					// change the state so that sendMotorCommandTask will not run
+					event_flags.motor_overheat = 0x00;
+				}
+
+			}
+		}
+		osDelay(MOTOR_OVERHEAT_DELAY);
+	}
 }
 
 void monitorStateTask(void *argument) {
