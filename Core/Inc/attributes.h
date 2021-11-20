@@ -34,4 +34,6 @@ extern const osThreadAttr_t monitorStateTask_attributes;
 
 extern const osThreadAttr_t initialSetupTask_attributes;
 
+extern const osThreadAttr_t sendMotorOverheatTask_attributes;
+
 #endif /* INC_ATTRIBUTES_H_ */

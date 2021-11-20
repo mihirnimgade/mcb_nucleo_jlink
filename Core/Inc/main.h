@@ -43,7 +43,7 @@ extern TIM_HandleTypeDef htim3;
 extern union FloatBytes {
 	float float_value;
 	uint8_t bytes[4];
-} current, velocity;
+} current, velocity, motor_temperature;
 
 // this struct is updated when an external interrupt comes in and combines boolean flags 
 // that helps to decide whether to send a regen command, normal command
@@ -56,6 +56,7 @@ typedef struct input_flags {
   volatile uint8_t encoder_value_is_zero;
   volatile uint8_t encoder_value_increasing;
   volatile uint8_t next_screen;
+  volatile uint8_t motor_overheat;
 } input_flags;
 
 extern input_flags event_flags;
