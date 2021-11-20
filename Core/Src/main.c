@@ -43,7 +43,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-union FloatBytes current, velocity;
+union FloatBytes current, velocity, motor_temperature;
 struct input_flags event_flags;
 
 uint32_t regen_value;
@@ -119,7 +119,7 @@ int main(void)
 	// <----- CAN setup ----->
 
 	CAN_Filter_Init();
-	HAL_CAN_ConfigFilter(&hcan, &battery_soc_filter);
+	HAL_CAN_ConfigFilter(&hcan, &mcb_filter);
 	HAL_CAN_Start(&hcan);
 
 	// <----- ADC setup ----->
@@ -129,7 +129,7 @@ int main(void)
 	HAL_ADC_Start_IT(&hadc1);
 
 	// TODO: comment out after debugging
-	SEGGER_SYSVIEW_Conf();
+	// SEGGER_SYSVIEW_Conf();
 
 	/* USER CODE END 2 */
 
