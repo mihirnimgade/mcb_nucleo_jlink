@@ -47,7 +47,7 @@ CAN_TxHeaderTypeDef kernel_state_header = {
 };
 
 CAN_RxHeaderTypeDef can_rx_header;
-CAN_FilterTypeDef battery_soc_filter;
+CAN_FilterTypeDef mcb_filter;
 
 uint32_t can_mailbox;
 
@@ -72,7 +72,7 @@ void MX_CAN_Init(void)
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
   hcan.Init.TimeSeg2 = CAN_BS2_4TQ;
-  hcan.Init.TimeTriggeredMode = DISABLE;
+  hcan.Init.TimeTriggeredMode = ENABLE;
   hcan.Init.AutoBusOff = DISABLE;
   hcan.Init.AutoWakeUp = DISABLE;
   hcan.Init.AutoRetransmission = DISABLE;
@@ -151,21 +151,20 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 // TODO: add brief here
 void CAN_Filter_Init(void)
 {
-    // in this case we are using two 16-bit filters in identifer mask mode
-    // therefore, the high and low values for the FilterID and FilterMask are going to be the same since
-    // we are currently only filtering for one ID (0x626)
-    battery_soc_filter.FilterIdHigh = (uint32_t)((BATTERY_BASE + 6) << 5);
-    battery_soc_filter.FilterIdLow = (uint32_t)((BATTERY_BASE + 6) << 5);
+    mcb_filter.FilterIdHigh = (uint32_t)((BATTERY_BASE + 6) << 5);
+    mcb_filter.FilterIdLow = (uint32_t)((MOTOR_CTRL_BASE + 11) << 5);
 
-    // masks away the last 5 bits of CAN message - the only relevant bits are [15:5] (11-bit standard identifier)
-    battery_soc_filter.FilterMaskIdHigh = (uint32_t)(0x7FF << 5);
-    battery_soc_filter.FilterMaskIdLow = (uint32_t)(0x7FF << 5);
+    mcb_filter.FilterMaskIdHigh = (uint32_t)((MOTOR_CTRL_BASE + 11) << 5);    // unused
+    mcb_filter.FilterMaskIdLow = (uint32_t)((MOTOR_CTRL_BASE + 11) << 5);     // unused
 
-    battery_soc_filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-    battery_soc_filter.FilterBank = (uint32_t)0;
-    battery_soc_filter.FilterMode = CAN_FILTERMODE_IDMASK;
-    battery_soc_filter.FilterScale = CAN_FILTERSCALE_16BIT;
-    battery_soc_filter.FilterActivation = CAN_FILTER_ENABLE;
+    mcb_filter.FilterMaskIdHigh = (uint32_t)(0x7FF << 5);
+    mcb_filter.FilterMaskIdLow = (uint32_t)(0x7FF << 5);
+
+    mcb_filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+    mcb_filter.FilterBank = (uint32_t)0;
+    mcb_filter.FilterMode = CAN_FILTERMODE_IDMASK;
+    mcb_filter.FilterScale = CAN_FILTERSCALE_16BIT;
+    mcb_filter.FilterActivation = CAN_FILTER_ENABLE;
 }
 
 /* USER CODE END 1 */

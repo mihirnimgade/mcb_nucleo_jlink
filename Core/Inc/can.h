@@ -40,6 +40,7 @@ extern CAN_HandleTypeDef hcan;
 #define BATTERY_BASE 0x620
 
 #define CAN_DATA_LENGTH 8
+#define CAN_HALF_DATA_LENGTH 4
 #define CAN_CONTROL_DATA_LENGTH 2
 
 extern CAN_TxHeaderTypeDef drive_command_header;
@@ -47,7 +48,7 @@ extern CAN_TxHeaderTypeDef screen_cruise_control_header;
 extern CAN_TxHeaderTypeDef kernel_state_header;
 
 extern CAN_RxHeaderTypeDef can_rx_header;
-extern CAN_FilterTypeDef battery_soc_filter;
+extern CAN_FilterTypeDef mcb_filter;
 extern uint32_t can_mailbox;
 
 /* USER CODE END Private defines */
