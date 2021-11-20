@@ -75,6 +75,12 @@ const osThreadAttr_t initialSetupTask_attributes = {
         .stack_size = 128 * 8
 };
 
+const osThreadAttr_t sendMotorOverheatTask_attributes = {
+        .name = "sendMotorOverheat",
+        .priority = (osPriority_t) osPriorityHigh,
+        .stack_size = 128 * 4
+};
+
 const osMessageQueueAttr_t encoderQueue_attributes = {
         .name = "encoderQueue"
 };
