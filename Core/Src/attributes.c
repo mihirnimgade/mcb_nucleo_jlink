@@ -57,6 +57,12 @@ const osThreadAttr_t updateEventFlagsTask_attributes = {
         .stack_size = 128 * 4
 };
 
+const osThreadAttr_t canReadMessagesTask_attributes = {
+        .name = "canReadMessages",
+        .priority = (osPriority_t) osPriorityHigh,
+        .stack_size = 128 * 4
+};
+
 const osThreadAttr_t receiveBatteryMessageTask_attributes = {
         .name = "receiveBatteryMessageTask",
         .priority = (osPriority_t) osPriorityLow,

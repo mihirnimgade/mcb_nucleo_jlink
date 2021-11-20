@@ -66,6 +66,8 @@
 #define ENCODER_READ_DELAY 					50
 #define READ_BATTERY_SOC_DELAY 				5000
 
+#define CAN_READ_MESSAGE_DELAY				100
+
 #define MAX_MOTOR_TEMPERATURE				60			/**< Maximum motor temperature in celsius. */
 
 #define STATE_LED_DELAY 					200
@@ -89,6 +91,8 @@ osThreadId_t kernelLEDTaskHandle;
 osThreadId_t readEncoderTaskHandle;
 osThreadId_t updateEventFlagsTaskHandle;
 
+osThreadId_t canReadMessagesTaskHandle;
+
 osThreadId_t sendMotorCommandTaskHandle;
 osThreadId_t sendRegenCommandTaskHandle;
 osThreadId_t sendCruiseCommandTaskHandle;
@@ -106,6 +110,7 @@ osThreadId_t monitorStateTaskHandle;
 osMessageQueueId_t encoderQueueHandle;
 
 osEventFlagsId_t commandEventFlagsHandle;
+osEventFlagsId_t canIdEventFlagsHandle;
 
 osSemaphoreId_t eventFlagsSemaphoreHandle;
 osSemaphoreId_t nextScreenSemaphoreHandle;
@@ -119,6 +124,15 @@ enum states {
 	MOTOR_OVERHEAT = (uint32_t) 0x0010
 } state;
 
+// indicates the CAN ID that is in the mailbox and ready to be used by a thread
+enum can_ids {
+    MOTOR_ID = (uint32_t) 0x0001,
+    BATTERY_ID = (uint32_t) 0x0002
+} can_id;
+
+// store the CAN message data that is read in the canReadMessages task as a global variable
+uint8_t current_can_data[8];
+
 volatile uint16_t encoder_reading = 0x0000;
 
 /* USER CODE END Variables */
@@ -131,6 +145,8 @@ void kernelLEDTask(void *argument);
 void readEncoderTask(void *argument);
 
 void updateEventFlagsTask(void *argument);
+
+void canReadMessagesTask(void *argument);
 
 void sendMotorCommandTask(void *argument);
 void sendRegenCommandTask(void *argument);
@@ -167,6 +183,8 @@ void MX_FREERTOS_Init(void) {
     readEncoderTaskHandle = osThreadNew(readEncoderTask, NULL, &readEncoderTask_attributes);
     updateEventFlagsTaskHandle = osThreadNew(updateEventFlagsTask, NULL, &updateEventFlagsTask_attributes);
 
+    canReadMessagesTaskHandle = osThreadNew(canReadMessagesTask, NULL, &canReadMessagesTask_attributes);
+
     sendMotorCommandTaskHandle = osThreadNew(sendMotorCommandTask, NULL, &sendMotorCommandTask_attributes);
     sendRegenCommandTaskHandle = osThreadNew(sendRegenCommandTask, NULL, &sendRegenCommandTask_attributes);
     sendCruiseCommandTaskHandle = osThreadNew(sendCruiseCommandTask, NULL, &sendCruiseCommandTask_attributes);
@@ -185,6 +203,7 @@ void MX_FREERTOS_Init(void) {
     // <----- Event flag object handles ----->
 
     commandEventFlagsHandle = osEventFlagsNew(NULL);
+    canIdEventFlagsHandle = osEventFlagsNew(NULL);
 
     // <----- Semaphore object handles ----->
 
@@ -432,27 +451,55 @@ __NO_RETURN void updateEventFlagsTask(void *argument) {
     }
 }
 
+
+/**
+  * @brief  Decides which thread will receive a CAN message
+  * @param  argument: Not used
+  * @retval None
+  */
+__NO_RETURN void canReadMessagesTask(void *argument) {
+
+    while (1) {
+		if (HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_RX_FIFO0)) {
+			// there are multiple CAN IDs being passed through the filter, pull out the current message
+			HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &can_rx_header, current_can_data);
+			// motor ID
+			if (can_rx_header.StdId == 0x50B) {
+				can_id = MOTOR_ID;
+			}
+			// battery SOC ID
+			else if (can_rx_header.StdId == 0x626) {
+				can_id = BATTERY_ID;
+			}
+			else {
+				// Major error. A CAN ID was received even though the filter only accepts 0x50B and 0x626
+			}
+
+		osEventFlagsSet(canIdEventFlagsHandle, can_id);
+        osDelay(CAN_READ_MESSAGE_DELAY);
+		}
+    }
+}
+
 /**
   * @brief  Reads battery SOC from CAN bus (message ID 0x626, data byte 0)
   * @param  argument: Not used
   * @retval None
   */
 __NO_RETURN void receiveBatteryMessageTask (void *argument) {
-    uint8_t battery_msg_data[8];
 
     while (1) {
-        if (HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_FIFO0)) {
-            // filtering for 0x626 ID done in hardware 
-            HAL_CAN_GetRxMessage(&hcan, CAN_FIFO0, &can_rx_header, battery_msg_data);
 
-            // if the battery SOC is out of range, assume it is at 100% as a safety measure
-            if (battery_msg_data[0] < 0 || battery_msg_data[0] > 100) {
-                // TODO: somehow indicate to the outside world that this has happened
-                battery_soc = 100;
-            } else {
-                battery_soc = battery_msg_data[0];
-            }
-        }
+        // waits for event flag that signals the Battery SOC ID has been received
+        osEventFlagsWait(canIdEventFlagsHandle, BATTERY_ID, osFlagsWaitAll, osWaitForever);
+
+		// if the battery SOC is out of range, assume it is at 100% as a safety measure
+		if (current_can_data[0] < 0 || current_can_data[0] > 100) {
+			// TODO: somehow indicate to the outside world that this has happened
+			battery_soc = 100;
+		} else {
+			battery_soc = current_can_data[0];
+		}
 
         osDelay(READ_BATTERY_SOC_DELAY);
     }
@@ -466,40 +513,36 @@ __NO_RETURN void receiveBatteryMessageTask (void *argument) {
  * @retval 	None
  */
 __NO_RETURN void sendMotorOverheatTask (void *argument) {
-	uint8_t motor_temperature_data[CAN_DATA_LENGTH]; // the motor temperature is bytes [3:0] TODO: this is an assumption
 
 	while (1) {
-		if (HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_RX_FIFO0)) {
-			// there are multiple CAN IDs being passed through the filter, check if the message is the motor temperature
-			HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &can_rx_header, motor_temperature_data);
-			if (can_rx_header.StdId == 0x50B) {
 
-				// assign the values from the CAN message into the
-				// use the union to convert the 4 bytes to a 32-bit float
-				for (int i = 0; i < (uint8_t)CAN_DATA_LENGTH / 2; i++)
-				{
-					/*
-					 * transfer the incoming bytes LIFO 	TODO: test IEEE 754 conversion on hardware
-					 * for example, 0xAABBCCDD
-					 * 		received[0] = 0xDD -> copied[3] = 0xDD
-					 * 		received[1] = 0xCC -> copied[2] - 0xCC
-					 * 		received[2] = 0xBB -> copied[1] = 0xBB
-					 * 		received[3] = 0xAA -> copied[0] - 0xAA
-					 */
-					motor_temperature.bytes[i] = motor_temperature_data[i];
-				}
+        // waits for event flag that signals the Motor ID has been received
+        osEventFlagsWait(canIdEventFlagsHandle, MOTOR_ID, osFlagsWaitAll, osWaitForever);
 
-				// if the motor temperature is over heating, stop sending commands
-				if (motor_temperature.float_value >= MAX_MOTOR_TEMPERATURE) {
-					// change the state so that sendMotorCommandTask will not run
-					event_flags.motor_overheat = 0x01;
-				} else {
-					// change the state so that sendMotorCommandTask will not run
-					event_flags.motor_overheat = 0x00;
-				}
-
-			}
+		// assign the values from the CAN message into the
+		// use the union to convert the 4 bytes to a 32-bit float
+		for (int i = 0; i < (uint8_t)CAN_DATA_LENGTH / 2; i++)
+		{
+			/*
+			 * transfer the incoming bytes LIFO 	TODO: test IEEE 754 conversion on hardware
+			 * for example, 0xAABBCCDD
+			 * 		received[0] = 0xDD -> copied[3] = 0xDD
+			 * 		received[1] = 0xCC -> copied[2] - 0xCC
+			 * 		received[2] = 0xBB -> copied[1] = 0xBB
+			 * 		received[3] = 0xAA -> copied[0] - 0xAA
+			 */
+			motor_temperature.bytes[i] = current_can_data[i];
 		}
+
+		// if the motor temperature is over heating, stop sending commands
+		if (motor_temperature.float_value >= MAX_MOTOR_TEMPERATURE) {
+			// change the state so that sendMotorCommandTask will not run
+			event_flags.motor_overheat = 0x01;
+		} else {
+			// change the state so that sendMotorCommandTask will not run
+			event_flags.motor_overheat = 0x00;
+		}
+
 		osDelay(MOTOR_OVERHEAT_DELAY);
 	}
 }

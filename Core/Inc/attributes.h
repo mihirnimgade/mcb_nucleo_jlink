@@ -15,6 +15,8 @@ extern const osThreadAttr_t kernelLEDTask_attributes;
 extern const osThreadAttr_t readEncoderTask_attributes;
 extern const osThreadAttr_t updateEventFlagsTask_attributes;
 
+extern const osThreadAttr_t canReadMessagesTask_attributes;
+
 extern const osThreadAttr_t sendMotorCommandTask_attributes;
 extern const osThreadAttr_t sendRegenCommandTask_attributes;
 extern const osThreadAttr_t sendCruiseCommandTask_attributes;

@@ -148,25 +148,29 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 
 /* USER CODE BEGIN 1 */
 
-// TODO: add brief here
+/**
+ * 	@brief 	Initializes a hardware CAN filter that filters for CAN messages that have the standard IDs 0x50B and 0x626.
+ *          Filters are configured in list mode and 16 bit scale allowing for 4 IDs to be filtered.
+ */
 void CAN_Filter_Init(void)
 {
-    mcb_filter.FilterIdHigh = (uint32_t)((BATTERY_BASE + 6) << 5);
-    mcb_filter.FilterIdLow = (uint32_t)((MOTOR_CTRL_BASE + 11) << 5);
+    /**
+    * Filter 4 seperate 11 bit IDs.
+    * Currently, only 2 out of the 4 available filters are being used. The remaining 2 are filled in as duplicates.
+    * Duplicates are in place because empty or random values will let through IDs that we have not specified to filter.
+    */
 
+    mcb_filter.FilterIdHigh = (uint32_t)((BATTERY_BASE + 6) << 5);            // Battery SOC
+    mcb_filter.FilterIdLow = (uint32_t)((MOTOR_CTRL_BASE + 11) << 5);         // Motor Temperature
     mcb_filter.FilterMaskIdHigh = (uint32_t)((MOTOR_CTRL_BASE + 11) << 5);    // unused
     mcb_filter.FilterMaskIdLow = (uint32_t)((MOTOR_CTRL_BASE + 11) << 5);     // unused
 
-    mcb_filter.FilterMaskIdHigh = (uint32_t)(0x7FF << 5);
-    mcb_filter.FilterMaskIdLow = (uint32_t)(0x7FF << 5);
-
     mcb_filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
     mcb_filter.FilterBank = (uint32_t)0;
-    mcb_filter.FilterMode = CAN_FILTERMODE_IDMASK;
+    mcb_filter.FilterMode = CAN_FILTERMODE_IDLIST;
     mcb_filter.FilterScale = CAN_FILTERSCALE_16BIT;
     mcb_filter.FilterActivation = CAN_FILTER_ENABLE;
 }
-
 /* USER CODE END 1 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
