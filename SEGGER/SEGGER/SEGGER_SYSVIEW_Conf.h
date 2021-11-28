@@ -80,7 +80,7 @@ Additional information:
 */
 
 #ifndef SEGGER_SYSVIEW_RTT_BUFFER_SIZE
-#define SEGGER_SYSVIEW_RTT_BUFFER_SIZE (2*1024)
+#define SEGGER_SYSVIEW_RTT_BUFFER_SIZE (3*1024)
 #endif
 
 
