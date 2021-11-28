@@ -13,7 +13,7 @@
 extern const osThreadAttr_t kernelLEDTask_attributes;
 
 extern const osThreadAttr_t readEncoderTask_attributes;
-extern const osThreadAttr_t updateEventFlagsTask_attributes;
+extern const osThreadAttr_t computeNextStateTask_attributes;
 
 extern const osThreadAttr_t canReadMessagesTask_attributes;
 
