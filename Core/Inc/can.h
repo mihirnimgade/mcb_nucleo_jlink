@@ -43,6 +43,8 @@ extern CAN_HandleTypeDef hcan;
 #define CAN_HALF_DATA_LENGTH 4
 #define CAN_CONTROL_DATA_LENGTH 2
 
+#define CAN_READY						(uint32_t) 0x0001
+
 extern CAN_TxHeaderTypeDef drive_command_header;
 extern CAN_TxHeaderTypeDef screen_cruise_control_header;
 extern CAN_TxHeaderTypeDef kernel_state_header;
