@@ -48,7 +48,7 @@
 
 #define DEFAULT_CRUISE_SPEED 				10 /* TODO: calibrate this */
 
-#define BATTERY_REGEN_THRESHOLD 			90 /* maximum battery percentage at which regen is enabled */
+#define BATTERY_REGEN_THRESHOLD 			90 /* battery percentage beyond which regen is disabled */
 
 #define CAN_FIFO0 							0
 #define CAN_FIFO1 							1
@@ -62,19 +62,17 @@
 #define PEDAL_MAX 							0x64 /* TODO: calibrate this */
 #define PEDAL_MIN 							0x00 /* TODO: calibrate this */
 
+#define MAX_MOTOR_TEMPERATURE				150				/**< Maximum allowed motor temperature in celsius. */
+
+#define STATE_LED_DELAY 					200
+#define KERNEL_LED_DELAY 					150
+#define MOTOR_OVERHEAT_DELAY				1000			/**< Delay between each time the motor temperature is read fro CAN (in ms).*/
 #define EVENT_FLAG_UPDATE_DELAY 			25
 #define ENCODER_READ_DELAY 					50
 #define READ_BATTERY_SOC_DELAY 				5000
+#define CAN_READ_MESSAGE_DELAY				1000
 
-#define CAN_READ_MESSAGE_DELAY				100
-
-#define MAX_MOTOR_TEMPERATURE				60			/**< Maximum motor temperature in celsius. */
-
-#define STATE_LED_DELAY 					200
-
-#define KERNEL_LED_DELAY 					150
-
-#define MOTOR_OVERHEAT_DELAY				1000			/**< Delay between each time the motor temperature is read fro CAN (in ms).*/
+#define DEBUG 								1
 
 /* USER CODE END PD */
 
@@ -89,7 +87,7 @@
 osThreadId_t kernelLEDTaskHandle;
 
 osThreadId_t readEncoderTaskHandle;
-osThreadId_t updateEventFlagsTaskHandle;
+osThreadId_t computeNextStateTaskHandle;
 
 osThreadId_t canReadMessagesTaskHandle;
 
@@ -115,6 +113,11 @@ osEventFlagsId_t canIdEventFlagsHandle;
 osSemaphoreId_t eventFlagsSemaphoreHandle;
 osSemaphoreId_t nextScreenSemaphoreHandle;
 
+//struct CAN_Tx_Message {
+//	CAN_TxHeaderTypeDef header;
+//	uint8_t data[8];
+//};
+
 // indicates the current state of the main control node
 enum states {
     IDLE = (uint32_t) 0x0001,
@@ -122,12 +125,13 @@ enum states {
     REGEN_READY = (uint32_t) 0x0004,
     CRUISE_READY = (uint32_t) 0x0008,
 	MOTOR_OVERHEAT = (uint32_t) 0x0010
-} state;
+} mcb_state;
 
 // indicates the CAN ID that is in the mailbox and ready to be used by a thread
 enum can_ids {
-    MOTOR_ID = (uint32_t) 0x0001,
-    BATTERY_ID = (uint32_t) 0x0002
+	INVALID = (uint32_t) 0x0001,
+    MOTOR_ID = (uint32_t) 0x0002,
+    BATTERY_ID = (uint32_t) 0x0004
 } can_id;
 
 // store the CAN message data that is read in the canReadMessages task as a global variable
@@ -144,7 +148,7 @@ void kernelLEDTask(void *argument);
 
 void readEncoderTask(void *argument);
 
-void updateEventFlagsTask(void *argument);
+void computeNextStateTask(void *argument);
 
 void canReadMessagesTask(void *argument);
 
@@ -181,7 +185,7 @@ void MX_FREERTOS_Init(void) {
     kernelLEDTaskHandle = osThreadNew(kernelLEDTask, NULL, &kernelLEDTask_attributes);
 
     readEncoderTaskHandle = osThreadNew(readEncoderTask, NULL, &readEncoderTask_attributes);
-    updateEventFlagsTaskHandle = osThreadNew(updateEventFlagsTask, NULL, &updateEventFlagsTask_attributes);
+    computeNextStateTaskHandle = osThreadNew(computeNextStateTask, NULL, &computeNextStateTask_attributes);
 
     canReadMessagesTaskHandle = osThreadNew(canReadMessagesTask, NULL, &canReadMessagesTask_attributes);
 
@@ -196,7 +200,7 @@ void MX_FREERTOS_Init(void) {
 
     // sendNextScreenMessageTaskHandle = osThreadNew(sendNextScreenMessageTask, NULL, &sendNextScreenTask_attributes);
 
-    // receiveBatteryMessageTaskHandle = osThreadNew(receiveBatteryMessageTask, NULL, &receiveBatteryMessageTask_attributes);
+    receiveBatteryMessageTaskHandle = osThreadNew(receiveBatteryMessageTask, NULL, &receiveBatteryMessageTask_attributes);
 
     monitorStateTaskHandle = osThreadNew(monitorStateTask, NULL, &monitorStateTask_attributes);
 
@@ -208,9 +212,12 @@ void MX_FREERTOS_Init(void) {
     // <----- Semaphore object handles ----->
 
     eventFlagsSemaphoreHandle = osSemaphoreNew(MAX_EVENT_FLAGS_SEMAPHORE_VAL, INIT_EVENT_FLAGS_SEMAPHORE_VAL, NULL);
-    nextScreenSemaphoreHandle = osSemaphoreNew(1, 0, NULL);
+    // nextScreenSemaphoreHandle = osSemaphoreNew(1, 0, NULL);
+
+    assert_param(eventFlagsSemaphoreHandle != NULL);
 
   /* USER CODE END Init */
+
 }
 
 /* Private application code --------------------------------------------------*/
@@ -424,29 +431,29 @@ __NO_RETURN void sendNextScreenMessageTask (void *argument) {
   * @param  argument: Not used
   * @retval None
   */
-__NO_RETURN void updateEventFlagsTask(void *argument) {
+__NO_RETURN void computeNextStateTask(void *argument) {
     while (1) {
         // order of priorities beginning with most important: regen braking, encoder motor command, cruise control
     	if (event_flags.motor_overheat) {
-    		state = MOTOR_OVERHEAT;
+    		mcb_state = MOTOR_OVERHEAT;
     	}
 		else if (event_flags.regen_enable && regen_value > 0 && battery_soc < BATTERY_REGEN_THRESHOLD) {
-            state = REGEN_READY;
+            mcb_state = REGEN_READY;
         }
         else if (!event_flags.encoder_value_is_zero && !event_flags.cruise_status) {
-            state = NORMAL_READY;
+            mcb_state = NORMAL_READY;
         }
         else if (event_flags.cruise_status && !event_flags.brake_in && !event_flags.encoder_value_increasing && (cruise_value > 0 || encoder_reading > 0)) {
-			if (state == NORMAL_READY) {
+			if (mcb_state == NORMAL_READY) {
 				cruise_value = encoder_reading;
 			}
-            state = CRUISE_READY;
+            mcb_state = CRUISE_READY;
         }
         else {
-            state = IDLE;
+            mcb_state = IDLE;
         }
 
-        osEventFlagsSet(commandEventFlagsHandle, state);
+        osEventFlagsSet(commandEventFlagsHandle, mcb_state);
         osDelay(EVENT_FLAG_UPDATE_DELAY);
     }
 }
@@ -458,26 +465,32 @@ __NO_RETURN void updateEventFlagsTask(void *argument) {
   * @retval None
   */
 __NO_RETURN void canReadMessagesTask(void *argument) {
+	HAL_StatusTypeDef status;
 
     while (1) {
-		if (HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_RX_FIFO0)) {
-			// there are multiple CAN IDs being passed through the filter, pull out the current message
-			HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &can_rx_header, current_can_data);
-			// motor ID
-			if (can_rx_header.StdId == 0x50B) {
-				can_id = MOTOR_ID;
-			}
-			// battery SOC ID
-			else if (can_rx_header.StdId == 0x626) {
-				can_id = BATTERY_ID;
-			}
-			else {
-				// Major error. A CAN ID was received even though the filter only accepts 0x50B and 0x626
-			}
+    	// wait for CAN RX ISR to set thread flags
+    	osThreadFlagsWait(CAN_READY, osFlagsWaitAll, osWaitForever);
+
+		// there are multiple CAN IDs being passed through the filter, pull out the current message
+		HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &can_rx_header, current_can_data);
+
+		// motor ID
+		if (can_rx_header.StdId == 0x50B) {
+			can_id = MOTOR_ID;
+		}
+		// battery SOC ID
+		else if (can_rx_header.StdId == 0x626) {
+			can_id = BATTERY_ID;
+		}
+		else {
+			// Major error. A CAN ID was received even though the filter only accepts 0x50B and 0x626
+			can_id = INVALID;
+		}
 
 		osEventFlagsSet(canIdEventFlagsHandle, can_id);
-        osDelay(CAN_READ_MESSAGE_DELAY);
-		}
+
+		status = HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+		assert_param(status == HAL_OK);
     }
 }
 
@@ -495,13 +508,11 @@ __NO_RETURN void receiveBatteryMessageTask (void *argument) {
 
 		// if the battery SOC is out of range, assume it is at 100% as a safety measure
 		if (current_can_data[0] < 0 || current_can_data[0] > 100) {
-			// TODO: somehow indicate to the outside world that this has happened
+			// TODO: should send out a CAN message here
 			battery_soc = 100;
 		} else {
 			battery_soc = current_can_data[0];
 		}
-
-        osDelay(READ_BATTERY_SOC_DELAY);
     }
 }
 
@@ -537,19 +548,17 @@ __NO_RETURN void sendMotorOverheatTask (void *argument) {
 		// if the motor temperature is over heating, stop sending commands
 		if (motor_temperature.float_value >= MAX_MOTOR_TEMPERATURE) {
 			// change the state so that sendMotorCommandTask will not run
-			event_flags.motor_overheat = 0x01;
+			event_flags.motor_overheat = TRUE;
 		} else {
 			// change the state so that sendMotorCommandTask will not run
-			event_flags.motor_overheat = 0x00;
+			event_flags.motor_overheat = FALSE;
 		}
-
-		osDelay(MOTOR_OVERHEAT_DELAY);
 	}
 }
 
 void monitorStateTask(void *argument) {
 	while (1) {
-		switch (state) {
+		switch (mcb_state) {
 		case NORMAL_READY:
 			HAL_GPIO_TogglePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin);
 			HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin, GPIO_PIN_RESET);
@@ -570,7 +579,7 @@ void monitorStateTask(void *argument) {
 			break;
 		}
 
-		if (state == CRUISE_READY) {
+		if (mcb_state == CRUISE_READY) {
 			HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_SET);
 		} else {
 			HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_RESET);

@@ -22,6 +22,8 @@
 
 /* USER CODE BEGIN 0 */
 
+#include "main.h"
+
 CAN_TxHeaderTypeDef drive_command_header = {
     .StdId = DRIVER_CONTROLS_BASE_ADDRESS + 1,
     .ExtId = 0x0000,
@@ -51,6 +53,8 @@ CAN_FilterTypeDef mcb_filter;
 
 uint32_t can_mailbox;
 
+extern osThreadId_t canReadMessagesTaskHandle;
+
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan;
@@ -72,7 +76,7 @@ void MX_CAN_Init(void)
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
   hcan.Init.TimeSeg2 = CAN_BS2_4TQ;
-  hcan.Init.TimeTriggeredMode = ENABLE;
+  hcan.Init.TimeTriggeredMode = DISABLE;
   hcan.Init.AutoBusOff = DISABLE;
   hcan.Init.AutoWakeUp = DISABLE;
   hcan.Init.AutoRetransmission = DISABLE;
@@ -117,6 +121,9 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
 
     __HAL_AFIO_REMAP_CAN1_2();
 
+    /* CAN1 interrupt Init */
+    HAL_NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
   /* USER CODE BEGIN CAN1_MspInit 1 */
 
   /* USER CODE END CAN1_MspInit 1 */
@@ -140,6 +147,8 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
     */
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_8|GPIO_PIN_9);
 
+    /* CAN1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(USB_LP_CAN1_RX0_IRQn);
   /* USER CODE BEGIN CAN1_MspDeInit 1 */
 
   /* USER CODE END CAN1_MspDeInit 1 */
@@ -171,6 +180,17 @@ void CAN_Filter_Init(void)
     mcb_filter.FilterScale = CAN_FILTERSCALE_16BIT;
     mcb_filter.FilterActivation = CAN_FILTER_ENABLE;
 }
+
+
+void HAL_CAN_RxFifo0MsgPendingCallback (CAN_HandleTypeDef * hcan) {
+	HAL_StatusTypeDef status = HAL_CAN_DeactivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+	assert_param(status == HAL_OK);
+
+	// osThreadFlagsClear(canReadMessagesTaskHandle);
+	osThreadFlagsSet(canReadMessagesTaskHandle, CAN_READY);
+}
+
+
 /* USER CODE END 1 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
