@@ -22,7 +22,6 @@
 #include "cmsis_os.h"
 #include "adc.h"
 #include "can.h"
-#include "dma.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -76,6 +75,7 @@ void MX_FREERTOS_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+
 /* USER CODE END 0 */
 
 /**
@@ -110,7 +110,6 @@ int main(void)
 	MX_USART2_UART_Init();
 	MX_ADC1_Init();
 	MX_CAN_Init();
-	MX_DMA_Init();
 	MX_TIM2_Init();
 	/* USER CODE BEGIN 2 */
 
@@ -122,6 +121,9 @@ int main(void)
 	HAL_CAN_ConfigFilter(&hcan, &mcb_filter);
 	HAL_CAN_Start(&hcan);
 
+	HAL_StatusTypeDef can_notification_status = HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+	assert_param(can_notification_status == HAL_OK);
+
 	// <----- ADC setup ----->
 
 	// ISR is the HAL_ADC_ConvCpltCallback function
@@ -129,13 +131,12 @@ int main(void)
 	HAL_ADC_Start_IT(&hadc1);
 
 	// TODO: comment out after debugging
-	// SEGGER_SYSVIEW_Conf();
+	SEGGER_SYSVIEW_Conf();
 
 	/* USER CODE END 2 */
 
 	/* Init scheduler */
 	osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
-
 	MX_FREERTOS_Init();
 	/* Start scheduler */
 	osKernelStart();
@@ -250,6 +251,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 	/* USER CODE BEGIN 6 */
 	/* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
 	/* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
