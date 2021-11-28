@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * File Name          : freertos.c
-  * Description        : Code for freertos applications
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under Ultimate Liberty license
-  * SLA0044, the "License"; You may not use this file except in compliance with
-  * the License. You may obtain a copy of the License at:
-  *                             www.st.com/SLA0044
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * File Name          : freertos.c
+ * Description        : Code for freertos applications
+ ******************************************************************************
+ * @attention
+ *
+ * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
+ * All rights reserved.</center></h2>
+ *
+ * This software component is licensed by ST under Ultimate Liberty license
+ * SLA0044, the "License"; You may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at:
+ *                             www.st.com/SLA0044
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -124,12 +124,12 @@ enum states {
     NORMAL_READY = (uint32_t) 0x0002,
     REGEN_READY = (uint32_t) 0x0004,
     CRUISE_READY = (uint32_t) 0x0008,
-	MOTOR_OVERHEAT = (uint32_t) 0x0010
+    MOTOR_OVERHEAT = (uint32_t) 0x0010
 } mcb_state;
 
 // indicates the CAN ID that is in the mailbox and ready to be used by a thread
 enum can_ids {
-	INVALID = (uint32_t) 0x0001,
+    INVALID = (uint32_t) 0x0001,
     MOTOR_ID = (uint32_t) 0x0002,
     BATTERY_ID = (uint32_t) 0x0004
 } can_id;
@@ -171,12 +171,12 @@ void receiveBatteryMessageTask(void *argument);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /**
-  * @brief  FreeRTOS initialization
-  * @param  None
-  * @retval None
-  */
+ * @brief  FreeRTOS initialization
+ * @param  None
+ * @retval None
+ */
 void MX_FREERTOS_Init(void) {
-  /* USER CODE BEGIN Init */
+    /* USER CODE BEGIN Init */
 
     encoderQueueHandle = osMessageQueueNew(ENCODER_QUEUE_MSG_CNT, ENCODER_QUEUE_MSG_SIZE, &encoderQueue_attributes);
 
@@ -194,9 +194,9 @@ void MX_FREERTOS_Init(void) {
     sendCruiseCommandTaskHandle = osThreadNew(sendCruiseCommandTask, NULL, &sendCruiseCommandTask_attributes);
     sendIdleCommandTaskHandle = osThreadNew(sendIdleCommandTask, NULL, &sendIdleCommandTask_attributes);
 
-	sendMotorOverheatTaskHandle = osThreadNew(sendMotorOverheatTask, NULL, &sendMotorOverheatTask_attributes);
+    sendMotorOverheatTaskHandle = osThreadNew(sendMotorOverheatTask, NULL, &sendMotorOverheatTask_attributes);
 
-	initialSetupTaskHandle = osThreadNew(initialSetupTask, NULL, &initialSetupTask_attributes);
+    initialSetupTaskHandle = osThreadNew(initialSetupTask, NULL, &initialSetupTask_attributes);
 
     // sendNextScreenMessageTaskHandle = osThreadNew(sendNextScreenMessageTask, NULL, &sendNextScreenTask_attributes);
 
@@ -216,7 +216,7 @@ void MX_FREERTOS_Init(void) {
 
     assert_param(eventFlagsSemaphoreHandle != NULL);
 
-  /* USER CODE END Init */
+    /* USER CODE END Init */
 
 }
 
@@ -224,43 +224,43 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE BEGIN Application */
 
 __NO_RETURN void kernelLEDTask(void *argument) {
-	osKernelState_t kernel_state;
+    osKernelState_t kernel_state;
 
-	while (1) {
-		kernel_state = osKernelGetState();
+    while (1) {
+        kernel_state = osKernelGetState();
 
-		if (kernel_state == osKernelRunning) {
-			HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-		}
+        if (kernel_state == osKernelRunning) {
+            HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+        }
 
-		osDelay(KERNEL_LED_DELAY);
-	}
+        osDelay(KERNEL_LED_DELAY);
+    }
 }
 
 void initialSetupTask(void *argument) {
     uint8_t data_send[CAN_DATA_LENGTH];
 
-	osKernelState_t kernel_state = osKernelGetState();
+    osKernelState_t kernel_state = osKernelGetState();
 
-	if (kernel_state == osKernelRunning) {
-		for (uint8_t i = 0; i < CAN_DATA_LENGTH; i++) {
-			data_send[i] = 0xff;
-		}
-		HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send, &can_mailbox);
-	} else {
-		for (uint8_t i = 0; i < CAN_DATA_LENGTH; i++) {
-			data_send[i] = 0x00;
-		}
+    if (kernel_state == osKernelRunning) {
+        for (uint8_t i = 0; i < CAN_DATA_LENGTH; i++) {
+            data_send[i] = 0xff;
+        }
+        HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send, &can_mailbox);
+    } else {
+        for (uint8_t i = 0; i < CAN_DATA_LENGTH; i++) {
+            data_send[i] = 0x00;
+        }
 
-		HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send, &can_mailbox);
-	}
-	osThreadExit();
+        HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send, &can_mailbox);
+    }
+    osThreadExit();
 }
 
 /**
-  * @brief  reads the encoder and places the value in the encoder queue
-  * @retval None
-  */
+ * @brief  reads the encoder and places the value in the encoder queue
+ * @retval None
+ */
 __NO_RETURN void readEncoderTask(void *argument) {
     static uint16_t old_encoder_reading = 0x0000;
 
@@ -275,10 +275,10 @@ __NO_RETURN void readEncoderTask(void *argument) {
         }
 
         if (encoder_reading > old_encoder_reading) {
-        	event_flags.encoder_value_increasing = TRUE;
-        	event_flags.cruise_status = DISABLE;
+            event_flags.encoder_value_increasing = TRUE;
+            event_flags.cruise_status = DISABLE;
         } else {
-        	event_flags.encoder_value_increasing = FALSE;
+            event_flags.encoder_value_increasing = FALSE;
         }
 
         old_encoder_reading = encoder_reading;
@@ -288,9 +288,9 @@ __NO_RETURN void readEncoderTask(void *argument) {
 }
 
 /**
-  * @brief  sends motor command (torque-control) CAN message once encoder value is read and a NORMAL_STATE flag is signalled
-  * @retval None
-  */
+ * @brief  sends motor command (torque-control) CAN message once encoder value is read and a NORMAL_STATE flag is signalled
+ * @retval None
+ */
 __NO_RETURN void sendMotorCommandTask(void *argument) {
     uint8_t data_send[CAN_DATA_LENGTH];
     uint16_t encoder_value;
@@ -329,9 +329,9 @@ __NO_RETURN void sendMotorCommandTask(void *argument) {
 }
 
 /**
-  * @brief  sends regen command (velocity control) CAN message
-  * @retval None
-  */
+ * @brief  sends regen command (velocity control) CAN message
+ * @retval None
+ */
 __NO_RETURN void sendRegenCommandTask(void *argument) {
     uint8_t data_send[CAN_DATA_LENGTH];
 
@@ -356,9 +356,9 @@ __NO_RETURN void sendRegenCommandTask(void *argument) {
 }
 
 /**
-  * @brief  sends cruise-control command (velocity control) CAN message
-  * @retval None
-  */
+ * @brief  sends cruise-control command (velocity control) CAN message
+ * @retval None
+ */
 __NO_RETURN void sendCruiseCommandTask (void *argument) {
     uint8_t data_send[CAN_DATA_LENGTH];
 
@@ -383,9 +383,9 @@ __NO_RETURN void sendCruiseCommandTask (void *argument) {
 }
 
 /**
-  * @brief  sends an "idle" CAN message when the car is not moving
-  * @retval None
-  */
+ * @brief  sends an "idle" CAN message when the car is not moving
+ * @retval None
+ */
 __NO_RETURN void sendIdleCommandTask (void *argument) {
     uint8_t data_send[CAN_DATA_LENGTH];
 
@@ -408,17 +408,17 @@ __NO_RETURN void sendIdleCommandTask (void *argument) {
 }
 
 /**
-  * @brief  sends next_screen command (to switch telemetry output) CAN message
-  * @param  argument: Not used
-  * @retval None
-  */
+ * @brief  sends next_screen command (to switch telemetry output) CAN message
+ * @param  argument: Not used
+ * @retval None
+ */
 __NO_RETURN void sendNextScreenMessageTask (void *argument) {
-	// maybe make this a global variable
+    // maybe make this a global variable
     uint8_t data_send[CAN_CONTROL_DATA_LENGTH];
 
     while (1) {
-    	// wait for next-screen semaphore
-    	osSemaphoreAcquire(nextScreenSemaphoreHandle, osWaitForever);
+        // wait for next-screen semaphore
+        osSemaphoreAcquire(nextScreenSemaphoreHandle, osWaitForever);
 
         data_send[1] = 0x01;
         HAL_CAN_AddTxMessage(&hcan, &screen_cruise_control_header, data_send, &can_mailbox);
@@ -427,26 +427,26 @@ __NO_RETURN void sendNextScreenMessageTask (void *argument) {
 
 
 /**
-  * @brief  Decides which thread will send a CAN message
-  * @param  argument: Not used
-  * @retval None
-  */
+ * @brief  Decides which thread will send a CAN message
+ * @param  argument: Not used
+ * @retval None
+ */
 __NO_RETURN void computeNextStateTask(void *argument) {
     while (1) {
         // order of priorities beginning with most important: regen braking, encoder motor command, cruise control
-    	if (event_flags.motor_overheat) {
-    		mcb_state = MOTOR_OVERHEAT;
-    	}
-		else if (event_flags.regen_enable && regen_value > 0 && battery_soc < BATTERY_REGEN_THRESHOLD) {
+        if (event_flags.motor_overheat) {
+            mcb_state = MOTOR_OVERHEAT;
+        }
+        else if (event_flags.regen_enable && regen_value > 0 && battery_soc < BATTERY_REGEN_THRESHOLD) {
             mcb_state = REGEN_READY;
         }
         else if (!event_flags.encoder_value_is_zero && !event_flags.cruise_status) {
             mcb_state = NORMAL_READY;
         }
         else if (event_flags.cruise_status && !event_flags.brake_in && !event_flags.encoder_value_increasing && (cruise_value > 0 || encoder_reading > 0)) {
-			if (mcb_state == NORMAL_READY) {
-				cruise_value = encoder_reading;
-			}
+            if (mcb_state == NORMAL_READY) {
+                cruise_value = encoder_reading;
+            }
             mcb_state = CRUISE_READY;
         }
         else {
@@ -460,45 +460,45 @@ __NO_RETURN void computeNextStateTask(void *argument) {
 
 
 /**
-  * @brief  Decides which thread will receive a CAN message
-  * @param  argument: Not used
-  * @retval None
-  */
+ * @brief  Decides which thread will receive a CAN message
+ * @param  argument: Not used
+ * @retval None
+ */
 __NO_RETURN void canReadMessagesTask(void *argument) {
-	HAL_StatusTypeDef status;
+    HAL_StatusTypeDef status;
 
     while (1) {
-    	// wait for CAN RX ISR to set thread flags
-    	osThreadFlagsWait(CAN_READY, osFlagsWaitAll, osWaitForever);
+        // wait for CAN RX ISR to set thread flags
+        osThreadFlagsWait(CAN_READY, osFlagsWaitAll, osWaitForever);
 
-		// there are multiple CAN IDs being passed through the filter, pull out the current message
-		HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &can_rx_header, current_can_data);
+        // there are multiple CAN IDs being passed through the filter, pull out the current message
+        HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &can_rx_header, current_can_data);
 
-		// motor ID
-		if (can_rx_header.StdId == 0x50B) {
-			can_id = MOTOR_ID;
-		}
-		// battery SOC ID
-		else if (can_rx_header.StdId == 0x626) {
-			can_id = BATTERY_ID;
-		}
-		else {
-			// Major error. A CAN ID was received even though the filter only accepts 0x50B and 0x626
-			can_id = INVALID;
-		}
+        // motor ID
+        if (can_rx_header.StdId == 0x50B) {
+            can_id = MOTOR_ID;
+        }
+        // battery SOC ID
+        else if (can_rx_header.StdId == 0x626) {
+            can_id = BATTERY_ID;
+        }
+        else {
+            // Major error. A CAN ID was received even though the filter only accepts 0x50B and 0x626
+            can_id = INVALID;
+        }
 
-		osEventFlagsSet(canIdEventFlagsHandle, can_id);
+        osEventFlagsSet(canIdEventFlagsHandle, can_id);
 
-		status = HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
-		assert_param(status == HAL_OK);
+        status = HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+        assert_param(status == HAL_OK);
     }
 }
 
 /**
-  * @brief  Reads battery SOC from CAN bus (message ID 0x626, data byte 0)
-  * @param  argument: Not used
-  * @retval None
-  */
+ * @brief  Reads battery SOC from CAN bus (message ID 0x626, data byte 0)
+ * @param  argument: Not used
+ * @retval None
+ */
 __NO_RETURN void receiveBatteryMessageTask (void *argument) {
 
     while (1) {
@@ -506,13 +506,13 @@ __NO_RETURN void receiveBatteryMessageTask (void *argument) {
         // waits for event flag that signals the Battery SOC ID has been received
         osEventFlagsWait(canIdEventFlagsHandle, BATTERY_ID, osFlagsWaitAll, osWaitForever);
 
-		// if the battery SOC is out of range, assume it is at 100% as a safety measure
-		if (current_can_data[0] < 0 || current_can_data[0] > 100) {
-			// TODO: should send out a CAN message here
-			battery_soc = 100;
-		} else {
-			battery_soc = current_can_data[0];
-		}
+        // if the battery SOC is out of range, assume it is at 100% as a safety measure
+        if (current_can_data[0] < 0 || current_can_data[0] > 100) {
+            // TODO: should send out a CAN message here
+            battery_soc = 100;
+        } else {
+            battery_soc = current_can_data[0];
+        }
     }
 }
 
@@ -525,69 +525,69 @@ __NO_RETURN void receiveBatteryMessageTask (void *argument) {
  */
 __NO_RETURN void sendMotorOverheatTask (void *argument) {
 
-	while (1) {
+    while (1) {
 
         // waits for event flag that signals the Motor ID has been received
         osEventFlagsWait(canIdEventFlagsHandle, MOTOR_ID, osFlagsWaitAll, osWaitForever);
 
-		// assign the values from the CAN message into the
-		// use the union to convert the 4 bytes to a 32-bit float
-		for (int i = 0; i < (uint8_t)CAN_DATA_LENGTH / 2; i++)
-		{
-			/*
-			 * transfer the incoming bytes LIFO 	TODO: test IEEE 754 conversion on hardware
-			 * for example, 0xAABBCCDD
-			 * 		received[0] = 0xDD -> copied[3] = 0xDD
-			 * 		received[1] = 0xCC -> copied[2] - 0xCC
-			 * 		received[2] = 0xBB -> copied[1] = 0xBB
-			 * 		received[3] = 0xAA -> copied[0] - 0xAA
-			 */
-			motor_temperature.bytes[i] = current_can_data[i];
-		}
+        // assign the values from the CAN message into the
+        // use the union to convert the 4 bytes to a 32-bit float
+        for (int i = 0; i < (uint8_t)CAN_DATA_LENGTH / 2; i++)
+        {
+            /*
+             * transfer the incoming bytes LIFO 	TODO: test IEEE 754 conversion on hardware
+             * for example, 0xAABBCCDD
+             * 		received[0] = 0xDD -> copied[3] = 0xDD
+             * 		received[1] = 0xCC -> copied[2] - 0xCC
+             * 		received[2] = 0xBB -> copied[1] = 0xBB
+             * 		received[3] = 0xAA -> copied[0] - 0xAA
+             */
+            motor_temperature.bytes[i] = current_can_data[i];
+        }
 
-		// if the motor temperature is over heating, stop sending commands
-		if (motor_temperature.float_value >= MAX_MOTOR_TEMPERATURE) {
-			// change the state so that sendMotorCommandTask will not run
-			event_flags.motor_overheat = TRUE;
-		} else {
-			// change the state so that sendMotorCommandTask will not run
-			event_flags.motor_overheat = FALSE;
-		}
-	}
+        // if the motor temperature is over heating, stop sending commands
+        if (motor_temperature.float_value >= MAX_MOTOR_TEMPERATURE) {
+            // change the state so that sendMotorCommandTask will not run
+            event_flags.motor_overheat = TRUE;
+        } else {
+            // change the state so that sendMotorCommandTask will not run
+            event_flags.motor_overheat = FALSE;
+        }
+    }
 }
 
 void monitorStateTask(void *argument) {
-	while (1) {
-		switch (mcb_state) {
-		case NORMAL_READY:
-			HAL_GPIO_TogglePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin);
-			HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin, GPIO_PIN_RESET);
-			break;
-		case REGEN_READY:
-			HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_TogglePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin);
-			HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin, GPIO_PIN_RESET);
-			break;
-		case CRUISE_READY:
-			HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_TogglePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin);
-			break;
-		default:
-			HAL_GPIO_WritePin(GPIOA, SEND_NORMAL_Pin|SEND_CRUISE_Pin|SEND_REGEN_Pin, GPIO_PIN_RESET);
-			break;
-		}
+    while (1) {
+        switch (mcb_state) {
+        case NORMAL_READY:
+            HAL_GPIO_TogglePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin);
+            HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin, GPIO_PIN_RESET);
+            break;
+        case REGEN_READY:
+            HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_TogglePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin);
+            HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin, GPIO_PIN_RESET);
+            break;
+        case CRUISE_READY:
+            HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_TogglePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin);
+            break;
+        default:
+            HAL_GPIO_WritePin(GPIOA, SEND_NORMAL_Pin|SEND_CRUISE_Pin|SEND_REGEN_Pin, GPIO_PIN_RESET);
+            break;
+        }
 
-		if (mcb_state == CRUISE_READY) {
-			HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_SET);
-		} else {
-			HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_RESET);
-		}
+        if (mcb_state == CRUISE_READY) {
+            HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_SET);
+        } else {
+            HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_RESET);
+        }
 
 
-		osDelay(STATE_LED_DELAY);
-	}
+        osDelay(STATE_LED_DELAY);
+    }
 }
 
 /* USER CODE END Application */
