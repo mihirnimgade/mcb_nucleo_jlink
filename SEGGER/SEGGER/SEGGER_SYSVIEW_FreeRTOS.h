@@ -1,59 +1,59 @@
 /*********************************************************************
-*                    SEGGER Microcontroller GmbH                     *
-*                        The Embedded Experts                        *
-**********************************************************************
-*                                                                    *
-*            (c) 1995 - 2021 SEGGER Microcontroller GmbH             *
-*                                                                    *
-*       www.segger.com     Support: support@segger.com               *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-*       SEGGER SystemView * Real-time application analysis           *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-* All rights reserved.                                               *
-*                                                                    *
-* SEGGER strongly recommends to not make any changes                 *
-* to or modify the source code of this software in order to stay     *
-* compatible with the SystemView and RTT protocol, and J-Link.       *
-*                                                                    *
-* Redistribution and use in source and binary forms, with or         *
-* without modification, are permitted provided that the following    *
-* condition is met:                                                  *
-*                                                                    *
-* o Redistributions of source code must retain the above copyright   *
-*   notice, this condition and the following disclaimer.             *
-*                                                                    *
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
-* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
-* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF           *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE           *
-* DISCLAIMED. IN NO EVENT SHALL SEGGER Microcontroller BE LIABLE FOR *
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR           *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT  *
-* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;    *
-* OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF      *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT          *
-* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE  *
-* USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH   *
-* DAMAGE.                                                            *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-*       SystemView version: 3.30                                    *
-*                                                                    *
-**********************************************************************
--------------------------- END-OF-HEADER -----------------------------
+ *                    SEGGER Microcontroller GmbH                     *
+ *                        The Embedded Experts                        *
+ **********************************************************************
+ *                                                                    *
+ *            (c) 1995 - 2021 SEGGER Microcontroller GmbH             *
+ *                                                                    *
+ *       www.segger.com     Support: support@segger.com               *
+ *                                                                    *
+ **********************************************************************
+ *                                                                    *
+ *       SEGGER SystemView * Real-time application analysis           *
+ *                                                                    *
+ **********************************************************************
+ *                                                                    *
+ * All rights reserved.                                               *
+ *                                                                    *
+ * SEGGER strongly recommends to not make any changes                 *
+ * to or modify the source code of this software in order to stay     *
+ * compatible with the SystemView and RTT protocol, and J-Link.       *
+ *                                                                    *
+ * Redistribution and use in source and binary forms, with or         *
+ * without modification, are permitted provided that the following    *
+ * condition is met:                                                  *
+ *                                                                    *
+ * o Redistributions of source code must retain the above copyright   *
+ *   notice, this condition and the following disclaimer.             *
+ *                                                                    *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF           *
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE           *
+ * DISCLAIMED. IN NO EVENT SHALL SEGGER Microcontroller BE LIABLE FOR *
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR           *
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT  *
+ * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;    *
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF      *
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT          *
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE  *
+ * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH   *
+ * DAMAGE.                                                            *
+ *                                                                    *
+ **********************************************************************
+ *                                                                    *
+ *       SystemView version: 3.30                                    *
+ *                                                                    *
+ **********************************************************************
+ -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_FreeRTOS.h
-Purpose : Interface between FreeRTOS and SystemView.
-Revision: $Rev: 7745 $
+ File    : SEGGER_SYSVIEW_FreeRTOS.h
+ Purpose : Interface between FreeRTOS and SystemView.
+ Revision: $Rev: 7745 $
 
-Notes:
-  (1) Include this file at the end of FreeRTOSConfig.h
-*/
+ Notes:
+ (1) Include this file at the end of FreeRTOSConfig.h
+ */
 
 #ifndef SYSVIEW_FREERTOS_H
 #define SYSVIEW_FREERTOS_H
@@ -61,23 +61,23 @@ Notes:
 #include "SEGGER_SYSVIEW.h"
 
 /*********************************************************************
-*
-*       Defines, configurable
-*
-**********************************************************************
-*/
+ *
+ *       Defines, configurable
+ *
+ **********************************************************************
+ */
 #ifndef portSTACK_GROWTH
-  #define portSTACK_GROWTH              ( -1 )
+#define portSTACK_GROWTH              ( -1 )
 #endif
 
 #define SYSVIEW_FREERTOS_MAX_NOF_TASKS  8
 
 /*********************************************************************
-*
-*       Defines, fixed
-*
-**********************************************************************
-*/
+ *
+ *       Defines, fixed
+ *
+ **********************************************************************
+ */
 #define apiID_OFFSET                              (32u)
 
 #define apiID_VTASKALLOCATEMPUREGIONS             (1u)
@@ -218,7 +218,7 @@ Notes:
 #define traceQUEUE_RECEIVE_FROM_ISR_FAILED( pxQueue )                           SEGGER_SYSVIEW_RecordU32x3(apiID_OFFSET + apiID_XQUEUERECEIVEFROMISR, SEGGER_SYSVIEW_ShrinkId((U32)pxQueue), SEGGER_SYSVIEW_ShrinkId((U32)pvBuffer), (U32)pxHigherPriorityTaskWoken)
 #define traceQUEUE_REGISTRY_ADD( xQueue, pcQueueName )                          SEGGER_SYSVIEW_RecordU32x2(apiID_OFFSET + apiID_VQUEUEADDTOREGISTRY, SEGGER_SYSVIEW_ShrinkId((U32)xQueue), (U32)pcQueueName)
 #if ( configUSE_QUEUE_SETS != 1 )
-  #define traceQUEUE_SEND( pxQueue )                                            SEGGER_SYSVIEW_RecordU32x4(apiID_OFFSET + apiID_XQUEUEGENERICSEND, SEGGER_SYSVIEW_ShrinkId((U32)pxQueue), (U32)pvItemToQueue, xTicksToWait, xCopyPosition)
+#define traceQUEUE_SEND( pxQueue )                                            SEGGER_SYSVIEW_RecordU32x4(apiID_OFFSET + apiID_XQUEUEGENERICSEND, SEGGER_SYSVIEW_ShrinkId((U32)pxQueue), (U32)pvItemToQueue, xTicksToWait, xCopyPosition)
 #else
   #define traceQUEUE_SEND( pxQueue )                                            SEGGER_SYSVIEW_RecordU32x4(apiID_OFFSET + apiID_XQUEUEGENERICSEND, SEGGER_SYSVIEW_ShrinkId((U32)pxQueue), 0u, 0u, xCopyPosition)
 #endif
@@ -236,12 +236,10 @@ Notes:
 #define traceSTREAM_BUFFER_RECEIVE_FAILED( xStreamBuffer )                      SEGGER_SYSVIEW_RecordU32x2(apiID_OFFSET + apiID_XSTREAMBUFFERRECEIVE, (U32)xStreamBuffer, 0u)
 #define traceSTREAM_BUFFER_RECEIVE_FROM_ISR( xStreamBuffer, xReceivedLength )   SEGGER_SYSVIEW_RecordU32x2(apiID_OFFSET + apiID_XSTREAMBUFFERRECEIVEFROMISR, (U32)xStreamBuffer, (U32)xReceivedLength)
 
-
 #define traceTASK_DELETE( pxTCB )                   {                                                                                                   \
                                                       SEGGER_SYSVIEW_RecordU32(apiID_OFFSET + apiID_VTASKDELETE, SEGGER_SYSVIEW_ShrinkId((U32)pxTCB));  \
                                                       SYSVIEW_DeleteTask((U32)pxTCB);                                                                   \
                                                     }
-
 
 #if( portSTACK_GROWTH < 0 )
 #define traceTASK_CREATE(pxNewTCB)                  if (pxNewTCB != NULL) {                                             \
@@ -286,7 +284,7 @@ Notes:
                                                       SEGGER_SYSVIEW_OnTaskStartExec((U32)pxCurrentTCB);                \
                                                     }
 #else
-  #define traceTASK_SWITCHED_IN()                   {                                                                   \
+#define traceTASK_SWITCHED_IN()                   {                                                                   \
                                                       if (memcmp(pxCurrentTCB->pcTaskName, "IDLE", 5) != 0) {           \
                                                         SEGGER_SYSVIEW_OnTaskStartExec((U32)pxCurrentTCB);              \
                                                       } else {                                                          \
@@ -302,24 +300,24 @@ Notes:
 #define traceMOVED_TASK_TO_OVERFLOW_DELAYED_LIST()  SEGGER_SYSVIEW_OnTaskStopReady((U32)pxCurrentTCB,  (1u << 2))
 #define traceMOVED_TASK_TO_SUSPENDED_LIST(pxTCB)    SEGGER_SYSVIEW_OnTaskStopReady((U32)pxTCB,         ((3u << 3) | 3))
 
-
 #define traceISR_EXIT_TO_SCHEDULER()                SEGGER_SYSVIEW_RecordExitISRToScheduler()
 #define traceISR_EXIT()                             SEGGER_SYSVIEW_RecordExitISR()
 #define traceISR_ENTER()                            SEGGER_SYSVIEW_RecordEnterISR()
 
 /*********************************************************************
-*
-*       API functions
-*
-**********************************************************************
-*/
+ *
+ *       API functions
+ *
+ **********************************************************************
+ */
 #ifdef __cplusplus
 extern "C" {
 #endif
-void SYSVIEW_AddTask      (U32 xHandle, const char* pcTaskName, unsigned uxCurrentPriority, U32  pxStack, unsigned uStackHighWaterMark);
-void SYSVIEW_UpdateTask   (U32 xHandle, const char* pcTaskName, unsigned uxCurrentPriority, U32 pxStack, unsigned uStackHighWaterMark);
-void SYSVIEW_DeleteTask   (U32 xHandle);
-void SYSVIEW_SendTaskInfo (U32 TaskID, const char* sName, unsigned Prio, U32 StackBase, unsigned StackSize);
+void SYSVIEW_AddTask(U32 xHandle, const char *pcTaskName, unsigned uxCurrentPriority, U32 pxStack, unsigned uStackHighWaterMark);
+void SYSVIEW_UpdateTask(U32 xHandle, const char *pcTaskName, unsigned uxCurrentPriority, U32 pxStack, unsigned uStackHighWaterMark);
+void SYSVIEW_DeleteTask(U32 xHandle);
+void SYSVIEW_SendTaskInfo(U32 TaskID, const char *sName, unsigned Prio,
+U32 StackBase, unsigned StackSize);
 
 #ifdef __cplusplus
 }

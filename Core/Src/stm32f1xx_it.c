@@ -167,7 +167,7 @@ void EXTI0_IRQHandler(void) {
 
     // interrupt handler for REGEN_EN pin
     event_flags.regen_enable = HAL_GPIO_ReadPin(REGEN_EN_GPIO_Port,
-            REGEN_EN_Pin);
+    REGEN_EN_Pin);
 
     /* USER CODE END EXTI0_IRQn 0 */
     HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
@@ -201,7 +201,7 @@ void EXTI2_IRQHandler(void) {
 
     // interrupt handler for RVRS_EN pin
     event_flags.reverse_enable = HAL_GPIO_ReadPin(RVRS_EN_GPIO_Port,
-            RVRS_EN_Pin);
+    RVRS_EN_Pin);
 
     /* USER CODE END EXTI2_IRQn 0 */
     HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);

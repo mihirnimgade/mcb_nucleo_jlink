@@ -33,8 +33,10 @@ void MX_TIM2_Init(void) {
 
     /* USER CODE END TIM2_Init 0 */
 
-    TIM_Encoder_InitTypeDef sConfig = { 0 };
-    TIM_MasterConfigTypeDef sMasterConfig = { 0 };
+    TIM_Encoder_InitTypeDef sConfig = {
+            0 };
+    TIM_MasterConfigTypeDef sMasterConfig = {
+            0 };
 
     /* USER CODE BEGIN TIM2_Init 1 */
 
@@ -59,8 +61,7 @@ void MX_TIM2_Init(void) {
     }
     sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
     sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-    if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig)
-            != HAL_OK) {
+    if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
         Error_Handler();
     }
     /* USER CODE BEGIN TIM2_Init 2 */
@@ -71,7 +72,8 @@ void MX_TIM2_Init(void) {
 
 void HAL_TIM_Encoder_MspInit(TIM_HandleTypeDef *tim_encoderHandle) {
 
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+    GPIO_InitTypeDef GPIO_InitStruct = {
+            0 };
     if (tim_encoderHandle->Instance == TIM2) {
         /* USER CODE BEGIN TIM2_MspInit 0 */
 
