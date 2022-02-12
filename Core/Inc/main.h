@@ -1,22 +1,22 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under Ultimate Liberty license
-  * SLA0044, the "License"; You may not use this file except in compliance with
-  * the License. You may obtain a copy of the License at:
-  *                             www.st.com/SLA0044
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.h
+ * @brief          : Header for main.c file.
+ *                   This file contains the common defines of the application.
+ ******************************************************************************
+ * @attention
+ *
+ * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
+ * All rights reserved.</center></h2>
+ *
+ * This software component is licensed by ST under Ultimate Liberty license
+ * SLA0044, the "License"; You may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at:
+ *                             www.st.com/SLA0044
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -42,23 +42,25 @@ extern "C" {
 
 extern TIM_HandleTypeDef htim3;
 
-extern union FloatBytes {
-	float float_value;
-	uint8_t bytes[4];
-} current, velocity, motor_temperature;
+union FloatBytes {
+    float float_value;
+    uint8_t bytes[4];
+};
+
+extern union FloatBytes current, velocity, motor_temperature;
 
 // this struct is updated when an external interrupt comes in and combines boolean flags 
 // that helps to decide whether to send a regen command, normal command
 typedef struct input_flags {
-  volatile uint8_t regen_enable;
-  volatile uint8_t reverse_enable;
-  volatile uint8_t cruise_status;
-  volatile uint8_t brake_in;
-  volatile uint8_t regen_value_is_zero;
-  volatile uint8_t encoder_value_is_zero;
-  volatile uint8_t encoder_value_increasing;
-  volatile uint8_t next_screen;
-  volatile uint8_t motor_overheat;
+    volatile uint8_t regen_enable;
+    volatile uint8_t reverse_enable;
+    volatile uint8_t cruise_status;
+    volatile uint8_t brake_in;
+    volatile uint8_t regen_value_is_zero;
+    volatile uint8_t encoder_value_is_zero;
+    volatile uint8_t encoder_value_increasing;
+    volatile uint8_t next_screen;
+    volatile uint8_t motor_overheat;
 } input_flags;
 
 extern input_flags event_flags;
