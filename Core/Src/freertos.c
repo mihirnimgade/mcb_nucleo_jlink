@@ -62,7 +62,8 @@
 #define PEDAL_MAX                           0x64 /* TODO: calibrate this */
 #define PEDAL_MIN                           0x00 /* TODO: calibrate this */
 
-#define MAX_MOTOR_TEMPERATURE               150				/**< Maximum allowed motor temperature in celsius. */
+#define MOTOR_OVERTEMP_THRESHOLD            150				/**< Maximum allowed motor temperature in celsius. */
+#define MOTOR_OVERTEMP_CLEAR_THRESHOLD      100				/**< Temperature at which MCB will leave the MOTOR_OVERHEAT state */
 
 #define STATE_LED_DELAY                     200
 #define KERNEL_LED_DELAY                    150
@@ -120,12 +121,14 @@ osSemaphoreId_t nextScreenSemaphoreHandle;
 
 // indicates the current state of the main control node
 enum states {
-    IDLE = (uint32_t) 0x0001,
-    NORMAL_READY = (uint32_t) 0x0002,
-    REGEN_READY = (uint32_t) 0x0004,
-    CRUISE_READY = (uint32_t) 0x0008,
-    MOTOR_OVERHEAT = (uint32_t) 0x0010
+    STATE_ERROR = (uint32_t) 0x0001,
+    IDLE = (uint32_t) 0x0002,
+    NORMAL_READY = (uint32_t) 0x0004,
+    REGEN_READY = (uint32_t) 0x0008,
+    CRUISE_READY = (uint32_t) 0x0010,
+    MOTOR_OVERHEAT = (uint32_t) 0x0020
 } mcb_state;
+
 
 // indicates the CAN ID that is in the mailbox and ready to be used by a thread
 enum can_ids {
@@ -179,43 +182,32 @@ void MX_FREERTOS_Init(void) {
     /* USER CODE BEGIN Init */
 
     encoderQueueHandle = osMessageQueueNew(ENCODER_QUEUE_MSG_CNT,
-            ENCODER_QUEUE_MSG_SIZE, &encoderQueue_attributes);
+    ENCODER_QUEUE_MSG_SIZE, &encoderQueue_attributes);
 
     // <----- Thread object handles ----->
 
-    kernelLEDTaskHandle = osThreadNew(kernelLEDTask, NULL,
-            &kernelLEDTask_attributes);
+    kernelLEDTaskHandle = osThreadNew(kernelLEDTask, NULL, &kernelLEDTask_attributes);
 
-    readEncoderTaskHandle = osThreadNew(readEncoderTask, NULL,
-            &readEncoderTask_attributes);
-    computeNextStateTaskHandle = osThreadNew(computeNextStateTask, NULL,
-            &computeNextStateTask_attributes);
+    readEncoderTaskHandle = osThreadNew(readEncoderTask, NULL, &readEncoderTask_attributes);
+    computeNextStateTaskHandle = osThreadNew(computeNextStateTask, NULL, &computeNextStateTask_attributes);
 
-    canReadMessagesTaskHandle = osThreadNew(canReadMessagesTask, NULL,
-            &canReadMessagesTask_attributes);
+    canReadMessagesTaskHandle = osThreadNew(canReadMessagesTask, NULL, &canReadMessagesTask_attributes);
 
-    sendMotorCommandTaskHandle = osThreadNew(sendMotorCommandTask, NULL,
-            &sendMotorCommandTask_attributes);
-    sendRegenCommandTaskHandle = osThreadNew(sendRegenCommandTask, NULL,
-            &sendRegenCommandTask_attributes);
-    sendCruiseCommandTaskHandle = osThreadNew(sendCruiseCommandTask, NULL,
-            &sendCruiseCommandTask_attributes);
-    sendIdleCommandTaskHandle = osThreadNew(sendIdleCommandTask, NULL,
-            &sendIdleCommandTask_attributes);
+    sendMotorCommandTaskHandle = osThreadNew(sendMotorCommandTask, NULL, &sendMotorCommandTask_attributes);
+    sendRegenCommandTaskHandle = osThreadNew(sendRegenCommandTask, NULL, &sendRegenCommandTask_attributes);
+    sendCruiseCommandTaskHandle = osThreadNew(sendCruiseCommandTask, NULL, &sendCruiseCommandTask_attributes);
+    sendIdleCommandTaskHandle = osThreadNew(sendIdleCommandTask, NULL, &sendIdleCommandTask_attributes);
 
-    sendMotorOverheatTaskHandle = osThreadNew(sendMotorOverheatTask, NULL,
-            &sendMotorOverheatTask_attributes);
+    sendMotorOverheatTaskHandle = osThreadNew(sendMotorOverheatTask, NULL, &sendMotorOverheatTask_attributes);
 
-    initialSetupTaskHandle = osThreadNew(initialSetupTask, NULL,
-            &initialSetupTask_attributes);
+    initialSetupTaskHandle = osThreadNew(initialSetupTask, NULL, &initialSetupTask_attributes);
 
     // sendNextScreenMessageTaskHandle = osThreadNew(sendNextScreenMessageTask, NULL, &sendNextScreenTask_attributes);
 
     receiveBatteryMessageTaskHandle = osThreadNew(receiveBatteryMessageTask,
-            NULL, &receiveBatteryMessageTask_attributes);
+    NULL, &receiveBatteryMessageTask_attributes);
 
-    monitorStateTaskHandle = osThreadNew(monitorStateTask, NULL,
-            &monitorStateTask_attributes);
+    monitorStateTaskHandle = osThreadNew(monitorStateTask, NULL, &monitorStateTask_attributes);
 
     // <----- Event flag object handles ----->
 
@@ -225,10 +217,13 @@ void MX_FREERTOS_Init(void) {
     // <----- Semaphore object handles ----->
 
     eventFlagsSemaphoreHandle = osSemaphoreNew(MAX_EVENT_FLAGS_SEMAPHORE_VAL,
-            INIT_EVENT_FLAGS_SEMAPHORE_VAL, NULL);
+    INIT_EVENT_FLAGS_SEMAPHORE_VAL, NULL);
     // nextScreenSemaphoreHandle = osSemaphoreNew(1, 0, NULL);
 
     assert_param(eventFlagsSemaphoreHandle != NULL);
+
+    // set initial MCB state
+    mcb_state = IDLE;
 
     /* USER CODE END Init */
 
@@ -260,15 +255,13 @@ void initialSetupTask(void *argument) {
         for (uint8_t i = 0; i < CAN_DATA_LENGTH; i++) {
             data_send[i] = 0xff;
         }
-        HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send,
-                &can_mailbox);
+        HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send, &can_mailbox);
     } else {
         for (uint8_t i = 0; i < CAN_DATA_LENGTH; i++) {
             data_send[i] = 0x00;
         }
 
-        HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send,
-                &can_mailbox);
+        HAL_CAN_AddTxMessage(&hcan, &kernel_state_header, data_send, &can_mailbox);
     }
     osThreadExit();
 }
@@ -316,19 +309,18 @@ __NO_RETURN void sendMotorCommandTask(void *argument) {
     while (1) {
         // blocks thread waiting for encoder value to be added to queue
         queue_status = osMessageQueueGet(encoderQueueHandle, &encoder_value,
-                NULL, 0U);
+        NULL, 0U);
 
         if (queue_status == osOK) {
             // current is linearly scaled to pedal position
-            current.float_value = (float) encoder_value
-                    / (PEDAL_MAX - PEDAL_MIN);
+            current.float_value = (float) encoder_value / (PEDAL_MAX - PEDAL_MIN);
         } else {
             // TODO: could maybe output to UART for debugging or even send a CAN message
             osThreadYield();
         }
 
         osEventFlagsWait(commandEventFlagsHandle, NORMAL_READY, osFlagsWaitAll,
-                osWaitForever);
+        osWaitForever);
 
         // velocity is set to unattainable value for motor torque-control mode
         if (event_flags.reverse_enable) {
@@ -343,8 +335,7 @@ __NO_RETURN void sendMotorCommandTask(void *argument) {
             data_send[4 + i] = current.bytes[i];
         }
 
-        HAL_CAN_AddTxMessage(&hcan, &drive_command_header, data_send,
-                &can_mailbox);
+        HAL_CAN_AddTxMessage(&hcan, &drive_command_header, data_send, &can_mailbox);
     }
 }
 
@@ -357,8 +348,7 @@ __NO_RETURN void sendRegenCommandTask(void *argument) {
 
     while (1) {
         // waits for event flag that signals the decision to send a regen command
-        osEventFlagsWait(commandEventFlagsHandle, REGEN_READY, osFlagsWaitAll,
-                osWaitForever);
+        osEventFlagsWait(commandEventFlagsHandle, REGEN_READY, osFlagsWaitAll, osWaitForever);
 
         // velocity is set to zero for regen CAN command
         velocity.float_value = 0.0;
@@ -372,8 +362,7 @@ __NO_RETURN void sendRegenCommandTask(void *argument) {
             data_send[4 + i] = current.bytes[i];
         }
 
-        HAL_CAN_AddTxMessage(&hcan, &drive_command_header, data_send,
-                &can_mailbox);
+        HAL_CAN_AddTxMessage(&hcan, &drive_command_header, data_send, &can_mailbox);
     }
 }
 
@@ -387,7 +376,7 @@ __NO_RETURN void sendCruiseCommandTask(void *argument) {
     while (1) {
         // waits for event flag that signals the decision to send a cruise control command
         osEventFlagsWait(commandEventFlagsHandle, CRUISE_READY, osFlagsWaitAll,
-                osWaitForever);
+        osWaitForever);
 
         // current set to maximum for a cruise control message
         current.float_value = 100.0;
@@ -401,8 +390,7 @@ __NO_RETURN void sendCruiseCommandTask(void *argument) {
             data_send[4 + i] = current.bytes[i];
         }
 
-        HAL_CAN_AddTxMessage(&hcan, &drive_command_header, data_send,
-                &can_mailbox);
+        HAL_CAN_AddTxMessage(&hcan, &drive_command_header, data_send, &can_mailbox);
     }
 }
 
@@ -415,8 +403,7 @@ __NO_RETURN void sendIdleCommandTask(void *argument) {
 
     while (1) {
         // waits for event flag that signals the decision to send an idle command
-        osEventFlagsWait(commandEventFlagsHandle, IDLE, osFlagsWaitAll,
-                osWaitForever);
+        osEventFlagsWait(commandEventFlagsHandle, IDLE, osFlagsWaitAll, osWaitForever);
 
         // zeroed since car would not be moving in idle state
         current.float_value = 0.0;
@@ -428,8 +415,7 @@ __NO_RETURN void sendIdleCommandTask(void *argument) {
             data_send[4 + i] = current.bytes[i];
         }
 
-        HAL_CAN_AddTxMessage(&hcan, &drive_command_header, data_send,
-                &can_mailbox);
+        HAL_CAN_AddTxMessage(&hcan, &drive_command_header, data_send, &can_mailbox);
     }
 }
 
@@ -447,9 +433,30 @@ __NO_RETURN void sendNextScreenMessageTask(void *argument) {
         osSemaphoreAcquire(nextScreenSemaphoreHandle, osWaitForever);
 
         data_send[1] = 0x01;
-        HAL_CAN_AddTxMessage(&hcan, &screen_cruise_control_header, data_send,
-                &can_mailbox);
+        HAL_CAN_AddTxMessage(&hcan, &screen_cruise_control_header, data_send, &can_mailbox);
     }
+}
+
+
+/**
+ * @brief  Decides what the next thread will be given certain event flags
+ * @retval An enum of type `states` describing the next state for the MCB
+ */
+enum states calculateNextState() {
+    if (event_flags.motor_overheat) {
+        return MOTOR_OVERHEAT;
+    } else if (event_flags.regen_enable && regen_value > 0 && battery_soc < BATTERY_REGEN_THRESHOLD) {
+        return REGEN_READY;
+    } else if (!event_flags.encoder_value_is_zero && !event_flags.cruise_status) {
+        return NORMAL_READY;
+    } else if (event_flags.cruise_status && !event_flags.brake_in && !event_flags.encoder_value_increasing
+            && (cruise_value > 0 || encoder_reading > 0)) {
+        return CRUISE_READY;
+    } else {
+        return IDLE;
+    }
+
+    return STATE_ERROR;
 }
 
 /**
@@ -458,26 +465,76 @@ __NO_RETURN void sendNextScreenMessageTask(void *argument) {
  * @retval None
  */
 __NO_RETURN void computeNextStateTask(void *argument) {
+    char *state_string = "NULL";
+    enum states current_mcb_state = IDLE;
+
     while (1) {
+        current_mcb_state = mcb_state;
+
         // order of priorities beginning with most important: regen braking, encoder motor command, cruise control
-        if (event_flags.motor_overheat) {
-            mcb_state = MOTOR_OVERHEAT;
-        } else if (event_flags.regen_enable
-                && regen_value > 0&& battery_soc < BATTERY_REGEN_THRESHOLD) {
-            mcb_state = REGEN_READY;
-        } else if (!event_flags.encoder_value_is_zero
-                && !event_flags.cruise_status) {
-            mcb_state = NORMAL_READY;
-        } else if (event_flags.cruise_status && !event_flags.brake_in
-                && !event_flags.encoder_value_increasing
-                && (cruise_value > 0 || encoder_reading > 0)) {
-            if (mcb_state == NORMAL_READY) {
+
+        // next state depends on previous state and other flag inputs (Mealy machine)
+        switch (current_mcb_state) {
+
+        case STATE_ERROR:
+            mcb_state = calculateNextState();
+            break;
+
+        case IDLE:
+            mcb_state = calculateNextState();
+            break;
+
+        case NORMAL_READY:
+            mcb_state = calculateNextState();
+            if (mcb_state == CRUISE_READY) {
                 cruise_value = encoder_reading;
             }
-            mcb_state = CRUISE_READY;
-        } else {
-            mcb_state = IDLE;
+            break;
+
+        case REGEN_READY:
+            mcb_state = calculateNextState();
+            break;
+
+        case CRUISE_READY:
+            mcb_state = calculateNextState();
+            break;
+
+        case MOTOR_OVERHEAT:
+            mcb_state = calculateNextState();
+            break;
+
+        default:
+            mcb_state = calculateNextState();
         }
+
+        SEGGER_RTT_SetTerminal(0);
+
+        switch (mcb_state) {
+        case IDLE:
+            state_string = "IDLE";
+            break;
+        case NORMAL_READY:
+            state_string = "NORMAL_READY";
+            break;
+        case REGEN_READY:
+            state_string = "REGEN_READY";
+            break;
+        case CRUISE_READY:
+            state_string = "CRUISE_READY";
+            break;
+        case MOTOR_OVERHEAT:
+            state_string = "MOTOR_OVERHEAT";
+            break;
+        case STATE_ERROR:
+            state_string = "STATE_ERROR";
+            break;
+
+        default:
+            state_string = "MAJOR_ERROR";
+        }
+
+        // writes the current state of the MCB to the SEGGER JLINK terminal (can use J-Link RTT Viewer to see output)
+        SEGGER_RTT_printf(0, "MCB state: 0x%x (%s)\n", mcb_state, state_string);
 
         osEventFlagsSet(commandEventFlagsHandle, mcb_state);
         osDelay(EVENT_FLAG_UPDATE_DELAY);
@@ -497,8 +554,7 @@ __NO_RETURN void canReadMessagesTask(void *argument) {
         osThreadFlagsWait(CAN_READY, osFlagsWaitAll, osWaitForever);
 
         // there are multiple CAN IDs being passed through the filter, pull out the current message
-        HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &can_rx_header,
-                current_can_data);
+        HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &can_rx_header, current_can_data);
 
         // motor ID
         if (can_rx_header.StdId == 0x50B) {
@@ -514,8 +570,8 @@ __NO_RETURN void canReadMessagesTask(void *argument) {
 
         osEventFlagsSet(canIdEventFlagsHandle, can_id);
 
-        status = HAL_CAN_ActivateNotification(&hcan,
-                CAN_IT_RX_FIFO0_MSG_PENDING);
+        status = HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+
         assert_param(status == HAL_OK);
     }
 }
@@ -531,7 +587,7 @@ __NO_RETURN void receiveBatteryMessageTask(void *argument) {
 
         // waits for event flag that signals the Battery SOC ID has been received
         osEventFlagsWait(canIdEventFlagsHandle, BATTERY_ID, osFlagsWaitAll,
-                osWaitForever);
+        osWaitForever);
 
         // if the battery SOC is out of range, assume it is at 100% as a safety measure
         if (current_can_data[0] < 0 || current_can_data[0] > 100) {
@@ -551,12 +607,11 @@ __NO_RETURN void receiveBatteryMessageTask(void *argument) {
  * @retval 	None
  */
 __NO_RETURN void sendMotorOverheatTask(void *argument) {
-
     while (1) {
 
         // waits for event flag that signals the Motor ID has been received
         osEventFlagsWait(canIdEventFlagsHandle, MOTOR_ID, osFlagsWaitAll,
-                osWaitForever);
+        osWaitForever);
 
         // assign the values from the CAN message into the
         // use the union to convert the 4 bytes to a 32-bit float
@@ -573,7 +628,7 @@ __NO_RETURN void sendMotorOverheatTask(void *argument) {
         }
 
         // if the motor temperature is over heating, stop sending commands
-        if (motor_temperature.float_value >= MAX_MOTOR_TEMPERATURE) {
+        if (motor_temperature.float_value >= MOTOR_OVERTEMP_THRESHOLD) {
             // change the state so that sendMotorCommandTask will not run
             event_flags.motor_overheat = TRUE;
         } else {
@@ -588,39 +643,33 @@ void monitorStateTask(void *argument) {
         switch (mcb_state) {
         case NORMAL_READY:
             HAL_GPIO_TogglePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin);
-            HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin,
-                    GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin,
-                    GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin, GPIO_PIN_RESET);
             break;
         case REGEN_READY:
-            HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin,
-                    GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin, GPIO_PIN_RESET);
             HAL_GPIO_TogglePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin);
-            HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin,
-                    GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin, GPIO_PIN_RESET);
             break;
         case CRUISE_READY:
-            HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin,
-                    GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin,
-                    GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SEND_NORMAL_GPIO_Port, SEND_NORMAL_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SEND_REGEN_GPIO_Port, SEND_REGEN_Pin, GPIO_PIN_RESET);
             HAL_GPIO_TogglePin(SEND_CRUISE_GPIO_Port, SEND_CRUISE_Pin);
             break;
         default:
-            HAL_GPIO_WritePin(GPIOA,
-                    SEND_NORMAL_Pin | SEND_CRUISE_Pin | SEND_REGEN_Pin,
-                    GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOA, SEND_NORMAL_Pin | SEND_CRUISE_Pin | SEND_REGEN_Pin, GPIO_PIN_RESET);
             break;
         }
 
         if (mcb_state == CRUISE_READY) {
-            HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin,
-                    GPIO_PIN_SET);
+            HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_SET);
         } else {
-            HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin,
-                    GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(CRUISE_STAT_GPIO_Port, CRUISE_STAT_Pin, GPIO_PIN_RESET);
         }
+
+        SEGGER_RTT_SetTerminal(1);
+        SEGGER_RTT_printf(0, "Motor temperature (degC): %d.0 | Battery SOC: %d%% \n",
+                (uint32_t) motor_temperature.float_value, battery_soc);
 
         osDelay(STATE_LED_DELAY);
     }
