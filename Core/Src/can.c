@@ -24,16 +24,26 @@
 
 #include "main.h"
 
-CAN_TxHeaderTypeDef drive_command_header = { .StdId =
-        DRIVER_CONTROLS_BASE_ADDRESS + 1, .ExtId = 0x0000, .IDE = CAN_ID_STD,
-        .RTR = CAN_RTR_DATA, .DLC = CAN_DATA_LENGTH };
+CAN_TxHeaderTypeDef drive_command_header = {
+        .StdId = DRIVER_CONTROLS_BASE_ADDRESS + 1,
+        .ExtId = 0x0000,
+        .IDE = CAN_ID_STD,
+        .RTR = CAN_RTR_DATA,
+        .DLC = CAN_DATA_LENGTH };
 
-CAN_TxHeaderTypeDef screen_cruise_control_header = { .StdId =
-        DRIVER_CONTROLS_BASE_ADDRESS + 3, .ExtId = 0x0000, .IDE = CAN_ID_STD,
-        .RTR = CAN_RTR_DATA, .DLC = CAN_CONTROL_DATA_LENGTH };
+CAN_TxHeaderTypeDef screen_cruise_control_header = {
+        .StdId = DRIVER_CONTROLS_BASE_ADDRESS + 3,
+        .ExtId = 0x0000,
+        .IDE = CAN_ID_STD,
+        .RTR = CAN_RTR_DATA,
+        .DLC = CAN_CONTROL_DATA_LENGTH };
 
-CAN_TxHeaderTypeDef kernel_state_header = { .StdId = 0x701, .ExtId = 0x0000,
-        .IDE = CAN_ID_STD, .RTR = CAN_RTR_DATA, .DLC = CAN_DATA_LENGTH };
+CAN_TxHeaderTypeDef kernel_state_header = {
+        .StdId = 0x701,
+        .ExtId = 0x0000,
+        .IDE = CAN_ID_STD,
+        .RTR = CAN_RTR_DATA,
+        .DLC = CAN_DATA_LENGTH };
 
 CAN_RxHeaderTypeDef can_rx_header;
 CAN_FilterTypeDef mcb_filter;
@@ -79,7 +89,8 @@ void MX_CAN_Init(void) {
 
 void HAL_CAN_MspInit(CAN_HandleTypeDef *canHandle) {
 
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+    GPIO_InitTypeDef GPIO_InitStruct = {
+            0 };
     if (canHandle->Instance == CAN1) {
         /* USER CODE BEGIN CAN1_MspInit 0 */
 
@@ -163,7 +174,7 @@ void CAN_Filter_Init(void) {
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
     HAL_StatusTypeDef status = HAL_CAN_DeactivateNotification(hcan,
-            CAN_IT_RX_FIFO0_MSG_PENDING);
+    CAN_IT_RX_FIFO0_MSG_PENDING);
     assert_param(status == HAL_OK);
 
     // osThreadFlagsClear(canReadMessagesTaskHandle);

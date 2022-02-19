@@ -119,8 +119,7 @@ int main(void) {
     HAL_CAN_ConfigFilter(&hcan, &mcb_filter);
     HAL_CAN_Start(&hcan);
 
-    HAL_StatusTypeDef can_notification_status = HAL_CAN_ActivateNotification(
-            &hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+    HAL_StatusTypeDef can_notification_status = HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
     assert_param(can_notification_status == HAL_OK);
 
     // <----- ADC setup ----->
@@ -156,9 +155,12 @@ int main(void) {
  * @retval None
  */
 void SystemClock_Config(void) {
-    RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
-    RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
-    RCC_PeriphCLKInitTypeDef PeriphClkInit = { 0 };
+    RCC_OscInitTypeDef RCC_OscInitStruct = {
+            0 };
+    RCC_ClkInitTypeDef RCC_ClkInitStruct = {
+            0 };
+    RCC_PeriphCLKInitTypeDef PeriphClkInit = {
+            0 };
 
     /** Initializes the RCC Oscillators according to the specified parameters
      * in the RCC_OscInitTypeDef structure.
@@ -175,8 +177,7 @@ void SystemClock_Config(void) {
     }
     /** Initializes the CPU, AHB and APB buses clocks
      */
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-            | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
     RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
