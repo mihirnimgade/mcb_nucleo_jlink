@@ -279,9 +279,7 @@ __NO_RETURN void readEncoderTask(void *argument) {
         // update the event flags struct
         event_flags.encoder_value_is_zero = (encoder_reading == 0);
 
-        if (encoder_reading != old_encoder_reading) {
-            osMessageQueuePut(encoderQueueHandle, &encoder_reading, 0U, 0U);
-        }
+        osMessageQueuePut(encoderQueueHandle, &encoder_reading, 0U, 0U);
 
         if (encoder_reading > old_encoder_reading) {
             event_flags.encoder_value_increasing = TRUE;
@@ -383,6 +381,7 @@ __NO_RETURN void sendCruiseCommandTask(void *argument) {
 
         // set velocity to cruise value
         velocity.float_value = (float) cruise_value;
+
 
         // writing data into data_send array which will be sent as a CAN message
         for (int i = 0; i < (uint8_t) CAN_DATA_LENGTH / 2; i++) {
@@ -535,6 +534,9 @@ __NO_RETURN void computeNextStateTask(void *argument) {
 
         // writes the current state of the MCB to the SEGGER JLINK terminal (can use J-Link RTT Viewer to see output)
         SEGGER_RTT_printf(0, "MCB state: 0x%x (%s)\n", mcb_state, state_string);
+
+        SEGGER_RTT_SetTerminal(2);
+        SEGGER_RTT_printf(0, "Current: %d | Velocity: %d\n", current.float_value, velocity.float_value);
 
         osEventFlagsSet(commandEventFlagsHandle, mcb_state);
         osDelay(EVENT_FLAG_UPDATE_DELAY);
