@@ -98,9 +98,9 @@ void Error_Handler(void);
 #define REGEN_EN_Pin GPIO_PIN_0
 #define REGEN_EN_GPIO_Port GPIOC
 #define REGEN_EN_EXTI_IRQn EXTI0_IRQn
-#define CRUISE_EN_Pin GPIO_PIN_1
-#define CRUISE_EN_GPIO_Port GPIOC
-#define CRUISE_EN_EXTI_IRQn EXTI1_IRQn
+#define BRK_IN_Pin GPIO_PIN_1
+#define BRK_IN_GPIO_Port GPIOC
+#define BRK_IN_EXTI_IRQn EXTI1_IRQn
 #define RVRS_EN_Pin GPIO_PIN_2
 #define RVRS_EN_GPIO_Port GPIOC
 #define RVRS_EN_EXTI_IRQn EXTI2_IRQn

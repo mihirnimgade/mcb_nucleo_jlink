@@ -143,6 +143,13 @@ uint8_t current_can_data[8];
 volatile uint16_t encoder_reading = 0x0000;
 
 /* USER CODE END Variables */
+/* Definitions for defaultTask */
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -171,15 +178,17 @@ void receiveBatteryMessageTask(void *argument);
 
 /* USER CODE END FunctionPrototypes */
 
+void StartDefaultTask(void *argument);
+
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /**
- * @brief  FreeRTOS initialization
- * @param  None
- * @retval None
- */
+  * @brief  FreeRTOS initialization
+  * @param  None
+  * @retval None
+  */
 void MX_FREERTOS_Init(void) {
-    /* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
     encoderQueueHandle = osMessageQueueNew(ENCODER_QUEUE_MSG_CNT,
     ENCODER_QUEUE_MSG_SIZE, &encoderQueue_attributes);
@@ -225,8 +234,54 @@ void MX_FREERTOS_Init(void) {
     // set initial MCB state
     mcb_state = IDLE;
 
-    /* USER CODE END Init */
+  /* USER CODE END Init */
 
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of defaultTask */
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
+}
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void *argument)
+{
+  /* USER CODE BEGIN StartDefaultTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
@@ -377,7 +432,7 @@ __NO_RETURN void sendCruiseCommandTask(void *argument) {
         osWaitForever);
 
         // current set to maximum for a cruise control message
-        current.float_value = 1.0;
+        current.float_value = (float) 1.0;
 
         // set velocity to cruise value
         velocity.float_value = (float) cruise_value;
@@ -405,8 +460,8 @@ __NO_RETURN void sendIdleCommandTask(void *argument) {
         osEventFlagsWait(commandEventFlagsHandle, IDLE, osFlagsWaitAll, osWaitForever);
 
         // zeroed since car would not be moving in idle state
-        current.float_value = 0.0;
-        velocity.float_value = 0.0;
+        current.float_value = (float) 0.0;
+        velocity.float_value = (float) 0.0;
 
         // writing data into data_send array which will be sent as a CAN message
         for (int i = 0; i < (uint8_t) CAN_DATA_LENGTH / 2; i++) {

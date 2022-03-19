@@ -9,7 +9,7 @@
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.jlink_txt_serial_number" value=""/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.reset_strategy" value="type_0_normal"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.restart_configurations" value="{&quot;fItems&quot;:[{&quot;fDisplayName&quot;:&quot;Type 0: Normal&quot;,&quot;fIsSuppressible&quot;:false,&quot;fResetAttribute&quot;:&quot;Type 0: Normal&quot;,&quot;fResetStrategies&quot;:[{&quot;fDisplayName&quot;:&quot;None&quot;,&quot;fLaunchAttribute&quot;:&quot;no_reset&quot;,&quot;fGdbCommands&quot;:[],&quot;fCmdOptions&quot;:[]},{&quot;fDisplayName&quot;:&quot;Type 0: Normal&quot;,&quot;fLaunchAttribute&quot;:&quot;type_0_normal&quot;,&quot;fGdbCommands&quot;:[&quot;monitor reset\r\n&quot;],&quot;fCmdOptions&quot;:[]}],&quot;fGdbCommandGroup&quot;:{&quot;name&quot;:&quot;Additional commands&quot;,&quot;commands&quot;:[]}}]}"/>
-    <intAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.rtos_implementation" value="1"/>
+    <intAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.rtos_implementation" value="2"/>
     <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.scan_chain_auto" value="true"/>
     <intAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.scan_chain_irpre" value="0"/>
     <intAttribute key="com.st.stm32cube.ide.mcu.debug.jlink.scan_chain_pos" value="0"/>
@@ -49,11 +49,11 @@
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.low_power_debug" value="none"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.max_halt_delay" value="2"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.reset_strategy" value="connect_under_reset"/>
-    <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.stlink_check_serial_number" value="true"/>
-    <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.stlink_txt_serial_number" value="402D07002A135937334D4E00"/>
+    <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.stlink_check_serial_number" value="false"/>
+    <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.stlink_txt_serial_number" value=""/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.watchdog_config" value="none"/>
-    <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.stlinkenable_rtos" value="true"/>
-    <booleanAttribute key="com.st.stm32cube.ide.mcu.rtosproxy.enableRtosProxy" value="true"/>
+    <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.stlinkenable_rtos" value="false"/>
+    <booleanAttribute key="com.st.stm32cube.ide.mcu.rtosproxy.enableRtosProxy" value="false"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.rtosproxy.rtosProxyCustomProperties" value=""/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.rtosproxy.rtosProxyDriver" value="freertos"/>
     <booleanAttribute key="com.st.stm32cube.ide.mcu.rtosproxy.rtosProxyDriverAuto" value="false"/>
