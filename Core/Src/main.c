@@ -29,8 +29,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "SEGGER_SYSVIEW.h"
-#include "SEGGER_RTT.h"
+#include <SEGGER/SEGGER_SYSVIEW.h>
+#include <SEGGER/SEGGER_RTT.h>
 
 /* USER CODE END Includes */
 
